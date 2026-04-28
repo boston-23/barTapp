@@ -165,9 +165,18 @@
     background: #000;
     border-radius: 12px;
     overflow: hidden;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
+    aspect-ratio: 1 / 1;
+    transition: opacity 0.2s;
   }
-  #scanner-video { width: 100%; display: block; }
+  #scanner-container.frozen { opacity: 0.55; }
+  #scanner-container.frozen .scanner-overlay { border-color: #fbbf24; }
+  #scanner-video {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+  }
   #scanner-canvas { display: none; }
   .scanner-overlay {
     position: absolute;
@@ -178,20 +187,61 @@
     border-radius: 12px;
     box-shadow: 0 0 0 2000px rgba(0,0,0,0.5);
     pointer-events: none;
+    transition: border-color 0.2s;
+  }
+  .scan-result {
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.35;
+    animation: flash 0.4s;
+  }
+  .scan-result strong { font-weight: 700; font-size: 14px; }
+  .scan-result.success { background: #14532d; border: 1px solid #16a34a; color: #d1fae5; }
+  .scan-result.warning { background: #7c2d12; border: 1px solid #ea580c; color: #fed7aa; }
+  .scan-result.error { background: #7f1d1d; border: 1px solid #dc2626; color: #fecaca; }
+  .scan-result code {
+    background: rgba(0,0,0,0.3);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 11px;
+  }
+  .scan-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .scan-actions button {
+    margin: 0;
+    padding: 13px;
+    font-size: 15px;
+  }
+  .burn-btn {
+    flex: 2;
+    background: #16a34a !important;
+  }
+  .cancel-btn {
+    flex: 1;
+    background: #475569 !important;
   }
   .scanner-status {
     text-align: center;
-    padding: 12px;
+    padding: 10px;
     border-radius: 8px;
     font-weight: 600;
-    margin-top: 12px;
-    font-size: 15px;
-    white-space: pre-line;
+    font-size: 13px;
+    background: #334155;
+    color: #cbd5e1;
   }
-  .scanner-status.idle { background: #334155; color: #cbd5e1; }
-  .scanner-status.success { background: #16a34a; color: white; animation: flash 0.5s; }
-  .scanner-status.warning { background: #ea580c; color: white; animation: flash 0.5s; }
-  .scanner-status.error { background: #dc2626; color: white; animation: flash 0.5s; }
+
+  /* Compact scan panel: fits in one iPhone screen, no scroll */
+  #panel-scan { padding: 10px; }
+  #panel-scan .card { padding: 12px; margin-bottom: 0; }
+  #panel-scan h2 { font-size: 14px; margin-bottom: 10px; }
+  #panel-scan button { padding: 12px; margin-top: 8px; }
+  #panel-scan details { margin-top: 8px; }
+  #panel-scan details summary { padding: 4px 0; font-size: 12px; }
   @keyframes flash {
     0% { transform: scale(1); }
     50% { transform: scale(1.05); }
@@ -481,25 +531,24 @@ Andrea Verdi  | andrea@mail.com   | 4     | tavolo VIP</div>
 
 <div id="panel-scan" class="panel">
   <div class="card">
-    <h2>Scanner QR</h2>
     <div id="scanner-container" style="display:none;">
-      <video id="scanner-video" playsinline></video>
+      <video id="scanner-video" playsinline muted></video>
       <canvas id="scanner-canvas"></canvas>
       <div class="scanner-overlay"></div>
     </div>
-    <div id="scanner-status" class="scanner-status idle">Premi "Avvia scanner" per iniziare</div>
+
+    <div id="scan-feedback">
+      <div id="scanner-status" class="scanner-status">📷 Premi avvia per iniziare</div>
+    </div>
 
     <button id="start-scan-btn" onclick="startScanner()">📷 Avvia scanner</button>
     <button id="stop-scan-btn" class="secondary" onclick="stopScanner()" style="display:none;">⏸ Ferma scanner</button>
 
     <details>
-      <summary>🔍 Inserimento manuale</summary>
-      <label>ID ticket</label>
-      <input type="text" id="manual-code" placeholder="es. DT-XXXXXXXX" autocomplete="off">
-      <button class="secondary" onclick="manualValidate()">Valida manualmente</button>
+      <summary>🔍 Inserimento manuale ID</summary>
+      <input type="text" id="manual-code" placeholder="DT-XXXXXXXX" autocomplete="off" style="text-transform:uppercase;">
+      <button class="secondary" onclick="manualValidate()">Valida</button>
     </details>
-
-    <div id="last-scan-info" style="margin-top:12px;"></div>
   </div>
 </div>
 
@@ -595,6 +644,7 @@ const STATE = {
   tickets: {},
   currentFilter: 'all',
   scanning: false,
+  frozen: false,
   videoStream: null,
   currentOrder: null,
   bulkGenerated: [],
@@ -1132,6 +1182,8 @@ function exportBulkCSV() {
 }
 
 // ============== SCANNER ==============
+// State.scanning: stream running (camera on)
+// State.frozen: stream still on but detection paused waiting user action
 async function startScanner() {
   const video = document.getElementById('scanner-video');
   try {
@@ -1141,33 +1193,61 @@ async function startScanner() {
     video.srcObject = STATE.videoStream;
     await video.play();
     STATE.scanning = true;
+    STATE.frozen = false;
     document.getElementById('scanner-container').style.display = 'block';
+    document.getElementById('scanner-container').classList.remove('frozen');
     document.getElementById('start-scan-btn').style.display = 'none';
     document.getElementById('stop-scan-btn').style.display = 'block';
-    setStatus('🔍 Scansione in corso... inquadra il QR', 'idle');
+    showIdleStatus();
     requestAnimationFrame(scanLoop);
   } catch(e) {
-    setStatus('❌ Impossibile accedere alla fotocamera. Verifica i permessi.', 'error');
+    showFeedback('error', '❌ Fotocamera non accessibile. Verifica i permessi.');
     console.error(e);
   }
 }
 
 function stopScanner() {
   STATE.scanning = false;
+  STATE.frozen = false;
   if (STATE.videoStream) {
     STATE.videoStream.getTracks().forEach(t => t.stop());
     STATE.videoStream = null;
   }
   document.getElementById('scanner-container').style.display = 'none';
+  document.getElementById('scanner-container').classList.remove('frozen');
   document.getElementById('start-scan-btn').style.display = 'block';
   document.getElementById('stop-scan-btn').style.display = 'none';
+  showIdleStatus('📷 Premi avvia per iniziare');
 }
 
-let lastDetected = null;
-let lastDetectedTime = 0;
+function freezeScanner() {
+  STATE.frozen = true;
+  document.getElementById('scanner-container').classList.add('frozen');
+}
+
+function resumeScanner() {
+  STATE.frozen = false;
+  document.getElementById('scanner-container').classList.remove('frozen');
+  showIdleStatus();
+}
+
+function showIdleStatus(msg) {
+  document.getElementById('scan-feedback').innerHTML = `
+    <div class="scanner-status">${msg || '🔍 Inquadra un QR code'}</div>`;
+}
+
+function showFeedback(type, html) {
+  document.getElementById('scan-feedback').innerHTML = `
+    <div class="scan-result ${type}">${html}</div>`;
+}
 
 function scanLoop() {
   if (!STATE.scanning) return;
+  if (STATE.frozen) {
+    // Keep loop alive but don't process frames while frozen
+    requestAnimationFrame(scanLoop);
+    return;
+  }
   const video = document.getElementById('scanner-video');
   const canvas = document.getElementById('scanner-canvas');
   if (video.readyState === video.HAVE_ENOUGH_DATA) {
@@ -1178,21 +1258,12 @@ function scanLoop() {
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const code = jsQR(imageData.data, imageData.width, imageData.height);
     if (code && code.data) {
-      const now = Date.now();
-      if (code.data !== lastDetected || now - lastDetectedTime > 3000) {
-        lastDetected = code.data;
-        lastDetectedTime = now;
-        validateTicket(code.data);
-      }
+      // Freeze immediately on detection
+      freezeScanner();
+      validateTicket(code.data);
     }
   }
   requestAnimationFrame(scanLoop);
-}
-
-function setStatus(msg, type) {
-  const el = document.getElementById('scanner-status');
-  el.textContent = msg;
-  el.className = 'scanner-status ' + type;
 }
 
 function getOrderSiblings(ticket) {
@@ -1204,15 +1275,17 @@ async function validateTicket(rawCode) {
   const code = rawCode.trim().toUpperCase();
   const ticket = STATE.tickets[code];
 
-  try { if (navigator.vibrate) navigator.vibrate(100); } catch(e) {}
+  try { if (navigator.vibrate) navigator.vibrate(80); } catch(e) {}
 
+  // Case 1: unknown QR
   if (!ticket) {
-    setStatus('❌ TICKET NON VALIDO\n' + code, 'error');
-    document.getElementById('last-scan-info').innerHTML = `
-      <div class="card" style="background:#7f1d1d;border-color:#dc2626;">
-        <strong>QR non riconosciuto</strong><br>
-        <small style="font-family:monospace;">${escapeHtml(code)}</small>
-      </div>`;
+    showFeedback('error', `
+      <strong>❌ QR non riconosciuto</strong><br>
+      <code>${escapeHtml(code)}</code>
+      <div class="scan-actions">
+        <button class="cancel-btn" onclick="cancelScan()">↻ Riprendi scan</button>
+      </div>
+    `);
     if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 100]);
     return;
   }
@@ -1220,61 +1293,72 @@ async function validateTicket(rawCode) {
   const siblings = getOrderSiblings(ticket);
   const siblingsUsed = siblings.filter(s => s.usedAt).length;
   const siblingsTotal = siblings.length || 1;
-  const siblingInfo = siblingsTotal > 1
-    ? `<small>Ordine: ${siblingsUsed}/${siblingsTotal} drink già usati</small><br>`
+  const orderProgress = siblingsTotal > 1
+    ? `<small>Ordine: ${siblingsUsed}/${siblingsTotal} usati</small><br>`
     : '';
 
+  // Case 2: already used
   if (ticket.usedAt) {
     const usedByInfo = ticket.usedBy && ticket.usedBy !== 'unknown'
-      ? ` da <strong>${escapeHtml(ticket.usedBy)}</strong>`
-      : '';
-    setStatus('⚠️ GIÀ USATO il ' + fmtDate(ticket.usedAt), 'warning');
-    document.getElementById('last-scan-info').innerHTML = `
-      <div class="card" style="background:#7c2d12;border-color:#ea580c;">
-        <strong>⚠️ Ticket già consumato</strong><br>
-        <strong>${escapeHtml(ticket.name)}</strong> ${ticket.orderTotal > 1 ? `(${ticket.orderIndex}/${ticket.orderTotal})` : ''}<br>
-        <code>${ticket.id}</code><br>
-        ${siblingInfo}
-        Usato il: ${fmtDate(ticket.usedAt)}${usedByInfo}
-      </div>`;
+      ? ` • ${escapeHtml(ticket.usedBy)}` : '';
+    showFeedback('warning', `
+      <strong>⚠️ GIÀ USATO</strong><br>
+      <strong>${escapeHtml(ticket.name)}</strong>${ticket.orderTotal > 1 ? ` (${ticket.orderIndex}/${ticket.orderTotal})` : ''}<br>
+      ${orderProgress}
+      <small>Usato: ${fmtDate(ticket.usedAt)}${usedByInfo}</small>
+      <div class="scan-actions">
+        <button class="cancel-btn" onclick="cancelScan()">↻ Riprendi scan</button>
+      </div>
+    `);
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     return;
   }
 
-  setStatus('✅ TICKET VALIDO', 'success');
-  document.getElementById('last-scan-info').innerHTML = `
-    <div class="card" style="background:#14532d;border-color:#16a34a;">
-      <strong>✅ Ticket valido</strong><br>
-      <strong>${escapeHtml(ticket.name)}</strong> ${ticket.orderTotal > 1 ? `<span style="background:#ec4899;padding:2px 6px;border-radius:4px;font-size:11px;">${ticket.orderIndex}/${ticket.orderTotal}</span>` : ''}<br>
-      <small><code>${ticket.id}</code></small><br>
-      ${siblingInfo}
-      ${ticket.notes ? '<em>' + escapeHtml(ticket.notes) + '</em><br>' : ''}
-      <button onclick="confirmBurn('${ticket.id}')" style="background:#16a34a;margin-top:12px;">🔥 BRUCIA TICKET</button>
-      <button class="secondary" onclick="cancelScan()" style="margin-top:6px;">Annulla</button>
-    </div>`;
+  // Case 3: valid — show burn/cancel
+  const indexBadge = ticket.orderTotal > 1
+    ? ` <span style="background:#ec4899;padding:1px 6px;border-radius:4px;font-size:11px;color:white;">${ticket.orderIndex}/${ticket.orderTotal}</span>`
+    : '';
+  showFeedback('success', `
+    <strong>✅ TICKET VALIDO</strong><br>
+    <strong>${escapeHtml(ticket.name)}</strong>${indexBadge}<br>
+    ${orderProgress}
+    ${ticket.notes ? `<small><em>${escapeHtml(ticket.notes)}</em></small><br>` : ''}
+    <small><code>${ticket.id}</code></small>
+    <div class="scan-actions">
+      <button class="burn-btn" onclick="confirmBurn('${ticket.id}')">🔥 BRUCIA</button>
+      <button class="cancel-btn" onclick="cancelScan()">Annulla</button>
+    </div>
+  `);
   if (navigator.vibrate) navigator.vibrate(200);
 }
 
 async function confirmBurn(id) {
-  toast('⏳ Validazione...');
+  // Disable buttons to prevent double-click
+  document.querySelectorAll('.scan-actions button').forEach(b => b.disabled = true);
   try {
     const result = await atomicBurnTicket(id, STATE.deviceName || 'unknown');
 
     if (!result.success) {
       if (result.reason === 'already_used') {
         const t = result.ticket;
-        const usedByInfo = t.usedBy && t.usedBy !== 'unknown' ? ` da ${t.usedBy}` : '';
-        setStatus('⚠️ Già bruciato' + usedByInfo + ' il ' + fmtDate(t.usedAt), 'warning');
-        document.getElementById('last-scan-info').innerHTML = `
-          <div class="card" style="background:#7c2d12;border-color:#ea580c;">
-            <strong>⚠️ Qualcun altro ha già bruciato questo ticket!</strong><br>
-            ${escapeHtml(t.name)} • ${fmtDate(t.usedAt)}${usedByInfo ? ' • ' + escapeHtml(t.usedBy) : ''}
-          </div>`;
+        const usedByInfo = t.usedBy && t.usedBy !== 'unknown' ? ` • ${escapeHtml(t.usedBy)}` : '';
+        showFeedback('warning', `
+          <strong>⚠️ Già bruciato altrove!</strong><br>
+          ${escapeHtml(t.name)}<br>
+          <small>${fmtDate(t.usedAt)}${usedByInfo}</small>
+          <div class="scan-actions">
+            <button class="cancel-btn" onclick="cancelScan()">↻ Riprendi scan</button>
+          </div>
+        `);
         if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
       } else {
-        toast('❌ Ticket non trovato');
+        showFeedback('error', `
+          <strong>❌ Ticket non trovato</strong>
+          <div class="scan-actions">
+            <button class="cancel-btn" onclick="cancelScan()">↻ Riprendi scan</button>
+          </div>
+        `);
       }
-      lastDetected = null;
       return;
     }
 
@@ -1282,35 +1366,45 @@ async function confirmBurn(id) {
     const siblings = getOrderSiblings(ticket);
     const remaining = siblings.filter(s => !s.usedAt).length;
     const remainingMsg = ticket.orderTotal > 1
-      ? `<br><small>Restano ${remaining}/${ticket.orderTotal} drink per ${escapeHtml(ticket.name)}</small>`
-      : '';
+      ? `<small>Restano ${remaining}/${ticket.orderTotal} drink</small>`
+      : '<small>Drink consegnato</small>';
 
-    setStatus('🔥 BRUCIATO! - ' + ticket.name, 'success');
-    document.getElementById('last-scan-info').innerHTML = `
-      <div class="card" style="background:#14532d;border-color:#16a34a;">
-        <strong>🔥 Ticket bruciato!</strong><br>
-        ${escapeHtml(ticket.name)} ${ticket.orderTotal > 1 ? `(${ticket.orderIndex}/${ticket.orderTotal})` : ''}<br>
-        <code>${ticket.id}</code>
-        ${remainingMsg}
-      </div>`;
+    showFeedback('success', `
+      <strong>🔥 BRUCIATO!</strong><br>
+      <strong>${escapeHtml(ticket.name)}</strong>${ticket.orderTotal > 1 ? ` (${ticket.orderIndex}/${ticket.orderTotal})` : ''}<br>
+      ${remainingMsg}
+    `);
     if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 300]);
     updateStats();
-    lastDetected = null;
+
+    // Auto-resume scan after a brief moment so the user sees the confirmation
+    setTimeout(() => {
+      if (STATE.scanning) resumeScanner();
+    }, 1800);
   } catch(e) {
     console.error(e);
-    toast('❌ Errore: ' + e.message);
+    showFeedback('error', `
+      <strong>❌ Errore: ${escapeHtml(e.message)}</strong>
+      <div class="scan-actions">
+        <button class="cancel-btn" onclick="cancelScan()">↻ Riprendi scan</button>
+      </div>
+    `);
   }
 }
 
 function cancelScan() {
-  document.getElementById('last-scan-info').innerHTML = '';
-  setStatus('🔍 Scansione in corso...', 'idle');
-  lastDetected = null;
+  if (STATE.scanning) {
+    resumeScanner();
+  } else {
+    showIdleStatus('📷 Premi avvia per iniziare');
+  }
 }
 
 function manualValidate() {
   const code = document.getElementById('manual-code').value.trim().toUpperCase();
   if (!code) return;
+  // If scanner is running, freeze it for the manual validation
+  if (STATE.scanning) freezeScanner();
   validateTicket(code);
   document.getElementById('manual-code').value = '';
 }
