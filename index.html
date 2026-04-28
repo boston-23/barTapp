@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🎟️ Drink Ticket Manager</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+  header {
+    background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+    padding: 18px 16px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 { font-size: 20px; font-weight: 700; }
+  header .subtitle { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+
+  .tabs {
+    display: flex;
+    background: #1e293b;
+    position: sticky;
+    top: 60px;
+    z-index: 90;
+    border-bottom: 1px solid #334155;
+  }
+  .tab {
+    flex: 1;
+    padding: 14px 8px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #94a3b8;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab.active {
+    color: #f9fafb;
+    border-bottom-color: #ec4899;
+    background: #0f172a;
+  }
+  .tab-icon { font-size: 18px; display: block; margin-bottom: 2px; }
+
+  .panel { display: none; padding: 16px; max-width: 600px; margin: 0 auto; }
+  .panel.active { display: block; }
+
+  .card {
+    background: #1e293b;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid #334155;
+  }
+
+  h2 { font-size: 16px; margin-bottom: 12px; color: #f1f5f9; }
+  label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 6px; margin-top: 10px; }
+  input, textarea, select {
+    width: 100%;
+    padding: 12px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: #e2e8f0;
+    font-size: 15px;
+    font-family: inherit;
+  }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: #ec4899; }
+
+  button {
+    background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 12px;
+    transition: transform 0.1s;
+  }
+  button:active { transform: scale(0.98); }
+  button.secondary { background: #334155; }
+  button.danger { background: #dc2626; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .qty-selector {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .qty-btn {
+    flex: 1;
+    padding: 14px;
+    background: #0f172a;
+    border: 2px solid #334155;
+    border-radius: 10px;
+    color: #94a3b8;
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+    margin: 0;
+    transition: all 0.2s;
+  }
+  .qty-btn.active {
+    border-color: #ec4899;
+    background: linear-gradient(135deg, rgba(124,58,237,0.2) 0%, rgba(236,72,153,0.2) 100%);
+    color: white;
+  }
+
+  .qr-pair {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .qr-result {
+    text-align: center;
+    padding: 16px;
+    background: white;
+    border-radius: 12px;
+    position: relative;
+  }
+  .qr-result .badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #ec4899;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+  .qr-result .qr-code { display: inline-block; }
+  .qr-result .qr-name {
+    color: #1e293b;
+    font-size: 14px;
+    font-weight: 700;
+    margin-top: 8px;
+  }
+  .qr-result .qr-id {
+    color: #64748b;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    margin-top: 4px;
+  }
+  .qr-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .qr-actions button { flex: 1; }
+
+  #scanner-container {
+    position: relative;
+    width: 100%;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  #scanner-video { width: 100%; display: block; }
+  #scanner-canvas { display: none; }
+  .scanner-overlay {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 70%; aspect-ratio: 1;
+    border: 3px solid #ec4899;
+    border-radius: 12px;
+    box-shadow: 0 0 0 2000px rgba(0,0,0,0.5);
+    pointer-events: none;
+  }
+  .scanner-status {
+    text-align: center;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    margin-top: 12px;
+    font-size: 15px;
+    white-space: pre-line;
+  }
+  .scanner-status.idle { background: #334155; color: #cbd5e1; }
+  .scanner-status.success { background: #16a34a; color: white; animation: flash 0.5s; }
+  .scanner-status.warning { background: #ea580c; color: white; animation: flash 0.5s; }
+  .scanner-status.error { background: #dc2626; color: white; animation: flash 0.5s; }
+
+  @keyframes flash {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .stat {
+    background: #1e293b;
+    padding: 10px 4px;
+    border-radius: 10px;
+    text-align: center;
+    border: 1px solid #334155;
+  }
+  .stat-value { font-size: 20px; font-weight: 700; color: #f1f5f9; }
+  .stat-label { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+
+  .ticket-list { max-height: 500px; overflow-y: auto; }
+  .order-group {
+    background: #0f172a;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    border: 1px solid #334155;
+  }
+  .order-header {
+    padding: 10px 12px;
+    background: #1e293b;
+    font-weight: 600;
+    font-size: 13px;
+    color: #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .order-header .order-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .order-header .order-count {
+    font-size: 11px;
+    background: #334155;
+    color: #cbd5e1;
+    padding: 3px 8px;
+    border-radius: 6px;
+    margin-left: 8px;
+  }
+  .ticket-row {
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    border-top: 1px solid #1e293b;
+    border-left: 3px solid #334155;
+  }
+  .ticket-row.used { border-left-color: #16a34a; opacity: 0.7; }
+  .ticket-row.valid { border-left-color: #ec4899; }
+  .ticket-info { flex: 1; min-width: 0; }
+  .ticket-meta { font-size: 11px; color: #94a3b8; font-family: 'Courier New', monospace; }
+  .ticket-status {
+    font-size: 10px; font-weight: 700; padding: 4px 8px;
+    border-radius: 6px; margin-left: 8px;
+  }
+  .ticket-status.valid { background: #ec4899; color: white; }
+  .ticket-status.used { background: #16a34a; color: white; }
+
+  .toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: 1px solid #475569;
+    font-size: 14px;
+    z-index: 1000;
+    animation: toastIn 0.3s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    max-width: 90%;
+  }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translate(-50%, 20px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+  }
+
+  .help-text { font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 8px; }
+  .help-text strong { color: #cbd5e1; }
+  .help-text code {
+    background: #0f172a;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+  }
+
+  details { margin-top: 12px; }
+  summary {
+    cursor: pointer;
+    font-size: 13px;
+    color: #94a3b8;
+    padding: 8px 0;
+  }
+  summary:hover { color: #e2e8f0; }
+
+  .file-input-wrapper {
+    position: relative;
+    display: block;
+    background: #334155;
+    color: white;
+    text-align: center;
+    padding: 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-top: 12px;
+  }
+  .file-input-wrapper input { position: absolute; opacity: 0; left: 0; top: 0; width: 100%; height: 100%; cursor: pointer; }
+
+  .filter-bar { display: flex; gap: 6px; margin-bottom: 8px; }
+  .filter-bar button {
+    flex: 1;
+    padding: 8px;
+    margin: 0;
+    font-size: 12px;
+    background: #334155;
+  }
+  .filter-bar button.active { background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%); }
+
+  .template-box {
+    background: #0f172a;
+    border: 1px dashed #475569;
+    border-radius: 8px;
+    padding: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    margin-top: 8px;
+    color: #cbd5e1;
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  #qr-print-area { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎟️ Drink Ticket Manager</h1>
+  <div class="subtitle">2 drink per persona • PayPal workflow</div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="generate" onclick="switchTab('generate', this)">
+    <span class="tab-icon">➕</span>Genera
+  </div>
+  <div class="tab" data-tab="bulk" onclick="switchTab('bulk', this)">
+    <span class="tab-icon">📋</span>Lista
+  </div>
+  <div class="tab" data-tab="scan" onclick="switchTab('scan', this)">
+    <span class="tab-icon">📷</span>Scan
+  </div>
+  <div class="tab" data-tab="list" onclick="switchTab('list', this)">
+    <span class="tab-icon">📊</span>Tickets
+  </div>
+</div>
+
+<!-- TAB: GENERA SINGOLO -->
+<div id="panel-generate" class="panel active">
+  <div class="card">
+    <h2>Nuovo ordine</h2>
+    <label>Nome cliente / Riferimento PayPal</label>
+    <input type="text" id="single-name" placeholder="es. Mario Rossi - PayPal #1234" autocomplete="off">
+
+    <label>Note (opzionale)</label>
+    <input type="text" id="single-notes" placeholder="es. evento 12/05" autocomplete="off">
+
+    <label>Numero di ticket</label>
+    <div class="qty-selector">
+      <button type="button" class="qty-btn" data-qty="1" onclick="setQty(1)">1 drink</button>
+      <button type="button" class="qty-btn active" data-qty="2" onclick="setQty(2)">2 drink</button>
+      <button type="button" class="qty-btn" data-qty="3" onclick="setQty(3)">3 drink</button>
+      <button type="button" class="qty-btn" data-qty="4" onclick="setQty(4)">4 drink</button>
+    </div>
+
+    <button onclick="generateSingle()">🎟️ Genera Ticket QR</button>
+
+    <div id="single-result" style="display:none;">
+      <div class="qr-pair" id="single-qr-pair"></div>
+      <div class="qr-actions">
+        <button class="secondary" onclick="downloadOrderImage()">📥 Scarica immagine</button>
+        <button class="secondary" onclick="shareOrderImage()">📤 Condividi</button>
+      </div>
+      <button class="secondary" onclick="downloadOrderPDF()" style="margin-top:6px;">📄 PDF stampabile</button>
+    </div>
+
+    <details>
+      <summary>ℹ️ Come funziona?</summary>
+      <div class="help-text">
+        <strong>1.</strong> Ricevi pagamento PayPal sulla mail.<br>
+        <strong>2.</strong> Inserisci nome del cliente e scegli n° drink (default 2).<br>
+        <strong>3.</strong> Genera i QR code accoppiati allo stesso ordine.<br>
+        <strong>4.</strong> Scarica/condividi l'immagine via WhatsApp o email.<br>
+        <strong>5.</strong> Al bar, scansiona ogni QR singolarmente — ognuno vale 1 drink.
+      </div>
+    </details>
+  </div>
+</div>
+
+<!-- TAB: LISTA EXCEL -->
+<div id="panel-bulk" class="panel">
+  <div class="card">
+    <h2>Carica lista ordini</h2>
+    <p class="help-text">Ogni riga del file = <strong>1 ordine</strong>. Per default ogni ordine genera <strong>2 ticket</strong>. Puoi sovrascrivere il numero per riga aggiungendo una colonna <code>Drink</code> o <code>Quantita</code>.</p>
+
+    <div class="template-box">Nome           | Email             | Drink | Note
+Mario Rossi   | mario@mail.com    | 2     | 
+Lucia Bianchi | lucia@mail.com    | 2     | spritz
+Andrea Verdi  | andrea@mail.com   | 4     | tavolo VIP</div>
+
+    <button class="secondary" onclick="downloadTemplate()" style="margin-top:8px;">📥 Scarica template Excel</button>
+
+    <label style="margin-top:16px;">Carica file Excel/CSV</label>
+    <label class="file-input-wrapper">
+      📁 Seleziona file (.xlsx, .csv)
+      <input type="file" id="excel-file" accept=".xlsx,.xls,.csv" onchange="loadExcel(event)">
+    </label>
+
+    <label>Oppure incolla nomi (uno per riga, 2 drink default)</label>
+    <textarea id="bulk-names" rows="5" placeholder="Mario Rossi&#10;Lucia Bianchi&#10;Andrea Verdi"></textarea>
+
+    <label>Drink per persona (se non specificato per riga)</label>
+    <select id="default-qty">
+      <option value="1">1 drink</option>
+      <option value="2" selected>2 drink</option>
+      <option value="3">3 drink</option>
+      <option value="4">4 drink</option>
+    </select>
+
+    <button onclick="generateBulk()">🎟️ Genera tickets in batch</button>
+    <button class="secondary" onclick="exportBulkPDF()" id="export-pdf-btn" style="display:none;">📄 PDF stampabile (coppie affiancate)</button>
+    <button class="secondary" onclick="exportBulkCSV()" id="export-csv-btn" style="display:none;">📊 CSV con ID ticket</button>
+
+    <div id="bulk-status" style="margin-top:12px;"></div>
+  </div>
+</div>
+
+<!-- TAB: SCANNER -->
+<div id="panel-scan" class="panel">
+  <div class="card">
+    <h2>Scanner QR</h2>
+    <div id="scanner-container" style="display:none;">
+      <video id="scanner-video" playsinline></video>
+      <canvas id="scanner-canvas"></canvas>
+      <div class="scanner-overlay"></div>
+    </div>
+    <div id="scanner-status" class="scanner-status idle">Premi "Avvia scanner" per iniziare</div>
+
+    <button id="start-scan-btn" onclick="startScanner()">📷 Avvia scanner</button>
+    <button id="stop-scan-btn" class="secondary" onclick="stopScanner()" style="display:none;">⏸ Ferma scanner</button>
+
+    <details>
+      <summary>🔍 Inserimento manuale</summary>
+      <label>ID ticket (se non riesci a scansionare)</label>
+      <input type="text" id="manual-code" placeholder="es. DT-XXXXXXXX" autocomplete="off">
+      <button class="secondary" onclick="manualValidate()">Valida manualmente</button>
+    </details>
+
+    <div id="last-scan-info" style="margin-top:12px;"></div>
+  </div>
+</div>
+
+<!-- TAB: LISTA TICKETS -->
+<div id="panel-list" class="panel">
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-value" id="stat-orders">0</div>
+      <div class="stat-label">ORDINI</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="stat-total">0</div>
+      <div class="stat-label">TICKETS</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="stat-valid" style="color:#ec4899;">0</div>
+      <div class="stat-label">VALIDI</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="stat-used" style="color:#16a34a;">0</div>
+      <div class="stat-label">USATI</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="filter-bar">
+      <button class="active" onclick="filterTickets('all', this)">Tutti</button>
+      <button onclick="filterTickets('valid', this)">Validi</button>
+      <button onclick="filterTickets('used', this)">Usati</button>
+    </div>
+
+    <input type="text" id="search-tickets" placeholder="🔍 Cerca per nome o ID..." oninput="renderTicketList()">
+
+    <div class="ticket-list" id="ticket-list" style="margin-top:12px;"></div>
+
+    <details>
+      <summary>⚙️ Strumenti avanzati</summary>
+      <button class="secondary" onclick="exportAllCSV()">📥 Esporta tutto (CSV + JSON)</button>
+      <button class="secondary" onclick="importBackup()">📤 Importa backup</button>
+      <button class="danger" onclick="resetUsedStatus()">↺ Riattiva tutti i ticket usati</button>
+      <button class="danger" onclick="deleteAllData()">🗑 Cancella tutto</button>
+      <input type="file" id="import-file" accept=".json" style="display:none;" onchange="handleImport(event)">
+    </details>
+  </div>
+</div>
+
+<div id="qr-print-area"></div>
+
+<script>
+// ============== STATE ==============
+const STORAGE_KEY = 'tickets';
+const STATE = {
+  tickets: {},
+  currentFilter: 'all',
+  scanning: false,
+  videoStream: null,
+  currentOrder: null,
+  bulkGenerated: [],
+  selectedQty: 2
+};
+
+// ============== STORAGE ==============
+async function loadAll() {
+  try {
+    if (window.storage && typeof window.storage.list === 'function') {
+      const result = await window.storage.list('tk:');
+      if (result && result.keys) {
+        for (const key of result.keys) {
+          try {
+            const item = await window.storage.get(key);
+            if (item && item.value) {
+              const t = JSON.parse(item.value);
+              STATE.tickets[t.id] = t;
+            }
+          } catch(e) {}
+        }
+        return;
+      }
+    }
+  } catch(e) {}
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) STATE.tickets = JSON.parse(saved);
+  } catch(e) {}
+}
+
+async function saveTicket(ticket) {
+  STATE.tickets[ticket.id] = ticket;
+  try {
+    if (window.storage && typeof window.storage.set === 'function') {
+      await window.storage.set('tk:' + ticket.id, JSON.stringify(ticket));
+    }
+  } catch(e) {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE.tickets)); } catch(e) {}
+}
+
+async function deleteTicket(id) {
+  delete STATE.tickets[id];
+  try {
+    if (window.storage && typeof window.storage.delete === 'function') {
+      await window.storage.delete('tk:' + id);
+    }
+  } catch(e) {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE.tickets)); } catch(e) {}
+}
+
+// ============== UTILS ==============
+function generateId() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let id = 'DT-';
+  for (let i = 0; i < 8; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  return id;
+}
+
+function generateOrderId() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let id = 'ORD-';
+  for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  return id;
+}
+
+function toast(msg, duration = 2500) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), duration);
+}
+
+function fmtDate(ts) {
+  if (!ts) return '-';
+  const d = new Date(ts);
+  return d.toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-' + tab).classList.add('active');
+  if (tab === 'list') renderTicketList();
+  if (tab !== 'scan') stopScanner();
+}
+
+// ============== QTY SELECTOR ==============
+function setQty(n) {
+  STATE.selectedQty = n;
+  document.querySelectorAll('.qty-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.qty) === n);
+  });
+}
+
+// ============== SINGLE / ORDER GENERATE ==============
+async function generateSingle() {
+  const name = document.getElementById('single-name').value.trim() || 'Anonimo';
+  const notes = document.getElementById('single-notes').value.trim();
+  const qty = STATE.selectedQty;
+  const orderId = generateOrderId();
+  const tickets = [];
+
+  for (let i = 0; i < qty; i++) {
+    const ticket = {
+      id: generateId(),
+      orderId,
+      orderIndex: i + 1,
+      orderTotal: qty,
+      name,
+      notes,
+      createdAt: Date.now() + i,
+      usedAt: null,
+      source: 'manual'
+    };
+    await saveTicket(ticket);
+    tickets.push(ticket);
+  }
+
+  STATE.currentOrder = { orderId, name, notes, tickets, qty };
+  renderCurrentOrder();
+  document.getElementById('single-name').value = '';
+  document.getElementById('single-notes').value = '';
+  toast(`✅ Ordine ${orderId}: ${qty} ticket generati`);
+  updateStats();
+}
+
+function renderCurrentOrder() {
+  if (!STATE.currentOrder) return;
+  const { tickets, qty } = STATE.currentOrder;
+  document.getElementById('single-result').style.display = 'block';
+  const pair = document.getElementById('single-qr-pair');
+  pair.innerHTML = '';
+  pair.style.gridTemplateColumns = qty === 1 ? '1fr' : '1fr 1fr';
+
+  tickets.forEach((ticket, idx) => {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'qr-result';
+    wrapper.innerHTML = `
+      <div class="badge">${idx + 1}/${qty}</div>
+      <div class="qr-code" id="qr-${ticket.id}"></div>
+      <div class="qr-name">${escapeHtml(ticket.name)}</div>
+      <div class="qr-id">${ticket.id}</div>
+    `;
+    pair.appendChild(wrapper);
+    new QRCode(document.getElementById('qr-' + ticket.id), {
+      text: ticket.id,
+      width: 180,
+      height: 180,
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  });
+}
+
+function composeOrderImage(order) {
+  const { tickets, qty, name, orderId } = order;
+  const ticketW = 500;
+  const ticketH = 700;
+  const cols = qty === 1 ? 1 : 2;
+  const rows = Math.ceil(qty / cols);
+  const W = ticketW * cols + 40 * (cols + 1);
+  const H = ticketH * rows + 40 * (rows + 1);
+
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0, '#7c3aed');
+  grad.addColorStop(1, '#ec4899');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  tickets.forEach((ticket, idx) => {
+    const col = idx % cols;
+    const row = Math.floor(idx / cols);
+    const x = 40 + col * (ticketW + 40);
+    const y = 40 + row * (ticketH + 40);
+
+    ctx.fillStyle = 'white';
+    ctx.fillRect(x, y, ticketW, ticketH);
+
+    ctx.fillStyle = '#1e293b';
+    ctx.font = 'bold 30px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🎟️ DRINK TICKET', x + ticketW/2, y + 60);
+
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillStyle = '#ec4899';
+    ctx.fillText(`${idx + 1} di ${qty}`, x + ticketW/2, y + 90);
+
+    ctx.font = '15px sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText('Vale per 1 consumazione', x + ticketW/2, y + 115);
+
+    const qrCanvas = document.querySelector('#qr-' + ticket.id + ' canvas');
+    if (qrCanvas) {
+      ctx.drawImage(qrCanvas, x + (ticketW - 280)/2, y + 145, 280, 280);
+    }
+
+    ctx.font = 'bold 22px sans-serif';
+    ctx.fillStyle = '#1e293b';
+    const nameTrunc = name.length > 28 ? name.substring(0, 28) + '…' : name;
+    ctx.fillText(nameTrunc, x + ticketW/2, y + 470);
+
+    if (ticket.notes) {
+      ctx.font = '15px sans-serif';
+      ctx.fillStyle = '#64748b';
+      const notesTrunc = ticket.notes.length > 35 ? ticket.notes.substring(0, 35) + '…' : ticket.notes;
+      ctx.fillText(notesTrunc, x + ticketW/2, y + 500);
+    }
+
+    ctx.font = 'bold 26px monospace';
+    ctx.fillStyle = '#ec4899';
+    ctx.fillText(ticket.id, x + ticketW/2, y + 580);
+
+    ctx.font = '13px monospace';
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText('Ordine: ' + orderId, x + ticketW/2, y + 610);
+
+    ctx.font = '13px sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText('Presenta questo QR al bar', x + ticketW/2, y + 645);
+    ctx.fillText(fmtDate(ticket.createdAt), x + ticketW/2, y + 670);
+  });
+
+  return c;
+}
+
+function downloadOrderImage() {
+  if (!STATE.currentOrder) return;
+  const c = composeOrderImage(STATE.currentOrder);
+  const link = document.createElement('a');
+  link.download = `ordine-${STATE.currentOrder.orderId}-${STATE.currentOrder.name.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+  link.href = c.toDataURL('image/png');
+  link.click();
+}
+
+async function shareOrderImage() {
+  if (!STATE.currentOrder) return;
+  const c = composeOrderImage(STATE.currentOrder);
+  c.toBlob(async (blob) => {
+    const file = new File([blob], `ordine-${STATE.currentOrder.orderId}.png`, { type: 'image/png' });
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: 'I tuoi drink ticket',
+          text: `${STATE.currentOrder.qty} drink ticket per ${STATE.currentOrder.name}`
+        });
+      } catch(e) { if (e.name !== 'AbortError') toast('Condivisione annullata'); }
+    } else {
+      downloadOrderImage();
+      toast('Salvato. Condividilo manualmente.');
+    }
+  }, 'image/png');
+}
+
+async function downloadOrderPDF() {
+  if (!STATE.currentOrder) return;
+  toast('⏳ Creazione PDF...');
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+  await renderTicketsToPDF(pdf, STATE.currentOrder.tickets);
+  pdf.save(`ordine-${STATE.currentOrder.orderId}.pdf`);
+  toast('✅ PDF scaricato');
+}
+
+// ============== BULK ==============
+let parsedExcelData = null;
+
+function downloadTemplate() {
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['Nome', 'Email', 'Drink', 'Note'],
+    ['Mario Rossi', 'mario@mail.com', 2, ''],
+    ['Lucia Bianchi', 'lucia@mail.com', 2, 'spritz'],
+    ['Andrea Verdi', 'andrea@mail.com', 4, 'tavolo VIP']
+  ]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Ordini');
+  XLSX.writeFile(wb, 'template-drink-tickets.xlsx');
+  toast('✅ Template scaricato');
+}
+
+function loadExcel(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+      parsedExcelData = rows;
+      const names = rows.map(r => {
+        const nameKey = Object.keys(r).find(k => /nome|name/i.test(k));
+        return nameKey ? r[nameKey] : Object.values(r)[0];
+      }).filter(Boolean);
+      document.getElementById('bulk-names').value = names.join('\n');
+      toast(`✅ ${rows.length} righe caricate`);
+    } catch(e) {
+      toast('❌ Errore lettura file');
+      console.error(e);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function generateBulk() {
+  const lines = document.getElementById('bulk-names').value.split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length === 0) { toast('Inserisci almeno un nome'); return; }
+  if (lines.length > 500) { toast('Massimo 500 ordini per volta'); return; }
+
+  const defaultQty = parseInt(document.getElementById('default-qty').value) || 2;
+  STATE.bulkGenerated = [];
+  const status = document.getElementById('bulk-status');
+  status.innerHTML = '<div class="card">⏳ Generazione in corso...</div>';
+
+  let totalTickets = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const name = lines[i];
+    let qty = defaultQty;
+    let notes = '';
+    let email = '';
+
+    if (parsedExcelData && parsedExcelData[i]) {
+      const row = parsedExcelData[i];
+      const qtyKey = Object.keys(row).find(k => /drink|quantita|quantity|qty/i.test(k));
+      if (qtyKey && row[qtyKey]) {
+        const parsed = parseInt(row[qtyKey]);
+        if (!isNaN(parsed) && parsed > 0 && parsed <= 10) qty = parsed;
+      }
+      const noteKey = Object.keys(row).find(k => /note/i.test(k));
+      if (noteKey) notes = String(row[noteKey] || '');
+      const emailKey = Object.keys(row).find(k => /email|mail/i.test(k));
+      if (emailKey) email = String(row[emailKey] || '');
+    }
+
+    const orderId = generateOrderId();
+    const fullNotes = email ? (notes ? notes + ' | ' + email : email) : notes;
+
+    for (let j = 0; j < qty; j++) {
+      const ticket = {
+        id: generateId(),
+        orderId,
+        orderIndex: j + 1,
+        orderTotal: qty,
+        name,
+        notes: fullNotes,
+        createdAt: Date.now() + i * 100 + j,
+        usedAt: null,
+        source: 'bulk'
+      };
+      await saveTicket(ticket);
+      STATE.bulkGenerated.push(ticket);
+      totalTickets++;
+    }
+  }
+
+  status.innerHTML = `<div class="card" style="background:#16a34a;color:white;">✅ ${lines.length} ordini → ${totalTickets} ticket</div>`;
+  document.getElementById('export-pdf-btn').style.display = 'block';
+  document.getElementById('export-csv-btn').style.display = 'block';
+  parsedExcelData = null;
+  updateStats();
+  toast(`✅ ${totalTickets} ticket creati`);
+}
+
+async function renderTicketsToPDF(pdf, tickets) {
+  const pageW = 210, pageH = 297;
+  const cols = 2, rows = 4;
+  const tW = pageW / cols, tH = pageH / rows;
+
+  const ordered = [...tickets].sort((a, b) => {
+    if (a.orderId === b.orderId) return a.orderIndex - b.orderIndex;
+    return a.createdAt - b.createdAt;
+  });
+
+  for (let i = 0; i < ordered.length; i++) {
+    const ticket = ordered[i];
+    const idxOnPage = i % (cols * rows);
+    if (i > 0 && idxOnPage === 0) pdf.addPage();
+
+    const col = idxOnPage % cols;
+    const row = Math.floor(idxOnPage / cols);
+    const x = col * tW, y = row * tH;
+
+    pdf.setDrawColor(180, 180, 180);
+    pdf.setLineDashPattern([1, 1], 0);
+    pdf.rect(x + 2, y + 2, tW - 4, tH - 4);
+    pdf.setLineDashPattern([], 0);
+
+    if (ticket.orderTotal > 1) {
+      pdf.setFillColor(236, 72, 153);
+      pdf.circle(x + 6, y + 6, 1.5, 'F');
+      pdf.setFontSize(7);
+      pdf.setTextColor(236, 72, 153);
+      pdf.text(`${ticket.orderIndex}/${ticket.orderTotal}`, x + 9, y + 7);
+    }
+
+    const tempDiv = document.createElement('div');
+    document.getElementById('qr-print-area').appendChild(tempDiv);
+    new QRCode(tempDiv, { text: ticket.id, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.H });
+    await new Promise(r => setTimeout(r, 30));
+    const qrCanvas = tempDiv.querySelector('canvas');
+    if (qrCanvas) {
+      const imgData = qrCanvas.toDataURL('image/png');
+      const qrSize = Math.min(tW - 20, tH - 40);
+      pdf.addImage(imgData, 'PNG', x + (tW - qrSize)/2, y + 10, qrSize, qrSize);
+    }
+    tempDiv.remove();
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10);
+    pdf.setTextColor(30, 41, 59);
+    const nameText = ticket.name.length > 24 ? ticket.name.substring(0, 24) + '…' : ticket.name;
+    pdf.text(nameText, x + tW/2, y + tH - 18, { align: 'center' });
+
+    pdf.setFont('courier', 'bold');
+    pdf.setFontSize(9);
+    pdf.setTextColor(236, 72, 153);
+    pdf.text(ticket.id, x + tW/2, y + tH - 11, { align: 'center' });
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7);
+    pdf.setTextColor(100, 116, 139);
+    pdf.text('Vale per 1 drink', x + tW/2, y + tH - 5, { align: 'center' });
+  }
+}
+
+async function exportBulkPDF() {
+  if (STATE.bulkGenerated.length === 0) return;
+  toast('⏳ Creazione PDF...');
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+  await renderTicketsToPDF(pdf, STATE.bulkGenerated);
+  pdf.save(`drink-tickets-${Date.now()}.pdf`);
+  toast('✅ PDF scaricato');
+}
+
+function exportBulkCSV() {
+  if (STATE.bulkGenerated.length === 0) return;
+  const rows = [['OrderID', 'TicketID', 'Indice', 'Nome', 'Note', 'Data creazione']];
+  STATE.bulkGenerated.forEach(t => {
+    rows.push([t.orderId, t.id, `${t.orderIndex}/${t.orderTotal}`, t.name, t.notes || '', fmtDate(t.createdAt)]);
+  });
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `tickets-${Date.now()}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  toast('✅ CSV scaricato');
+}
+
+// ============== SCANNER ==============
+async function startScanner() {
+  const video = document.getElementById('scanner-video');
+  try {
+    STATE.videoStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' }
+    });
+    video.srcObject = STATE.videoStream;
+    await video.play();
+    STATE.scanning = true;
+    document.getElementById('scanner-container').style.display = 'block';
+    document.getElementById('start-scan-btn').style.display = 'none';
+    document.getElementById('stop-scan-btn').style.display = 'block';
+    setStatus('🔍 Scansione in corso... inquadra il QR', 'idle');
+    requestAnimationFrame(scanLoop);
+  } catch(e) {
+    setStatus('❌ Impossibile accedere alla fotocamera. Verifica i permessi.', 'error');
+    console.error(e);
+  }
+}
+
+function stopScanner() {
+  STATE.scanning = false;
+  if (STATE.videoStream) {
+    STATE.videoStream.getTracks().forEach(t => t.stop());
+    STATE.videoStream = null;
+  }
+  document.getElementById('scanner-container').style.display = 'none';
+  document.getElementById('start-scan-btn').style.display = 'block';
+  document.getElementById('stop-scan-btn').style.display = 'none';
+}
+
+let lastDetected = null;
+let lastDetectedTime = 0;
+
+function scanLoop() {
+  if (!STATE.scanning) return;
+  const video = document.getElementById('scanner-video');
+  const canvas = document.getElementById('scanner-canvas');
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    if (code && code.data) {
+      const now = Date.now();
+      if (code.data !== lastDetected || now - lastDetectedTime > 3000) {
+        lastDetected = code.data;
+        lastDetectedTime = now;
+        validateTicket(code.data);
+      }
+    }
+  }
+  requestAnimationFrame(scanLoop);
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById('scanner-status');
+  el.textContent = msg;
+  el.className = 'scanner-status ' + type;
+}
+
+function getOrderSiblings(ticket) {
+  if (!ticket.orderId) return [];
+  return Object.values(STATE.tickets).filter(t => t.orderId === ticket.orderId);
+}
+
+async function validateTicket(rawCode) {
+  const code = rawCode.trim().toUpperCase();
+  const ticket = STATE.tickets[code];
+
+  try { if (navigator.vibrate) navigator.vibrate(100); } catch(e) {}
+
+  if (!ticket) {
+    setStatus('❌ TICKET NON VALIDO\n' + code, 'error');
+    document.getElementById('last-scan-info').innerHTML = `
+      <div class="card" style="background:#7f1d1d;border-color:#dc2626;">
+        <strong>QR non riconosciuto</strong><br>
+        <small style="font-family:monospace;">${escapeHtml(code)}</small>
+      </div>`;
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 100]);
+    return;
+  }
+
+  const siblings = getOrderSiblings(ticket);
+  const siblingsUsed = siblings.filter(s => s.usedAt).length;
+  const siblingsTotal = siblings.length || 1;
+  const siblingInfo = siblingsTotal > 1
+    ? `<small>Ordine: ${siblingsUsed}/${siblingsTotal} drink già usati</small><br>`
+    : '';
+
+  if (ticket.usedAt) {
+    setStatus('⚠️ GIÀ USATO il ' + fmtDate(ticket.usedAt), 'warning');
+    document.getElementById('last-scan-info').innerHTML = `
+      <div class="card" style="background:#7c2d12;border-color:#ea580c;">
+        <strong>⚠️ Ticket già consumato</strong><br>
+        <strong>${escapeHtml(ticket.name)}</strong> ${ticket.orderTotal > 1 ? `(${ticket.orderIndex}/${ticket.orderTotal})` : ''}<br>
+        <code>${ticket.id}</code><br>
+        ${siblingInfo}
+        Usato il: ${fmtDate(ticket.usedAt)}
+      </div>`;
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    return;
+  }
+
+  setStatus('✅ TICKET VALIDO', 'success');
+  document.getElementById('last-scan-info').innerHTML = `
+    <div class="card" style="background:#14532d;border-color:#16a34a;">
+      <strong>✅ Ticket valido</strong><br>
+      <strong>${escapeHtml(ticket.name)}</strong> ${ticket.orderTotal > 1 ? `<span style="background:#ec4899;padding:2px 6px;border-radius:4px;font-size:11px;">${ticket.orderIndex}/${ticket.orderTotal}</span>` : ''}<br>
+      <small><code>${ticket.id}</code></small><br>
+      ${siblingInfo}
+      ${ticket.notes ? '<em>' + escapeHtml(ticket.notes) + '</em><br>' : ''}
+      <button onclick="confirmBurn('${ticket.id}')" style="background:#16a34a;margin-top:12px;">🔥 BRUCIA TICKET</button>
+      <button class="secondary" onclick="cancelScan()" style="margin-top:6px;">Annulla</button>
+    </div>`;
+  if (navigator.vibrate) navigator.vibrate(200);
+}
+
+async function confirmBurn(id) {
+  const ticket = STATE.tickets[id];
+  if (!ticket) return;
+  if (ticket.usedAt) { toast('Già usato!'); return; }
+  ticket.usedAt = Date.now();
+  await saveTicket(ticket);
+
+  const siblings = getOrderSiblings(ticket);
+  const remaining = siblings.filter(s => !s.usedAt).length;
+  const remainingMsg = ticket.orderTotal > 1
+    ? `<br><small>Restano ${remaining}/${ticket.orderTotal} drink per ${escapeHtml(ticket.name)}</small>`
+    : '';
+
+  setStatus('🔥 BRUCIATO! - ' + ticket.name, 'success');
+  document.getElementById('last-scan-info').innerHTML = `
+    <div class="card" style="background:#14532d;border-color:#16a34a;">
+      <strong>🔥 Ticket bruciato!</strong><br>
+      ${escapeHtml(ticket.name)} ${ticket.orderTotal > 1 ? `(${ticket.orderIndex}/${ticket.orderTotal})` : ''}<br>
+      <code>${ticket.id}</code>
+      ${remainingMsg}
+    </div>`;
+  if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 300]);
+  updateStats();
+  lastDetected = null;
+}
+
+function cancelScan() {
+  document.getElementById('last-scan-info').innerHTML = '';
+  setStatus('🔍 Scansione in corso...', 'idle');
+  lastDetected = null;
+}
+
+function manualValidate() {
+  const code = document.getElementById('manual-code').value.trim().toUpperCase();
+  if (!code) return;
+  validateTicket(code);
+  document.getElementById('manual-code').value = '';
+}
+
+// ============== TICKET LIST ==============
+function updateStats() {
+  const tickets = Object.values(STATE.tickets);
+  const used = tickets.filter(t => t.usedAt).length;
+  const orderIds = new Set(tickets.map(t => t.orderId).filter(Boolean));
+  document.getElementById('stat-orders').textContent = orderIds.size;
+  document.getElementById('stat-total').textContent = tickets.length;
+  document.getElementById('stat-valid').textContent = tickets.length - used;
+  document.getElementById('stat-used').textContent = used;
+}
+
+function filterTickets(filter, btn) {
+  STATE.currentFilter = filter;
+  document.querySelectorAll('.filter-bar button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTicketList();
+}
+
+function renderTicketList() {
+  const list = document.getElementById('ticket-list');
+  const search = document.getElementById('search-tickets').value.toLowerCase();
+  let tickets = Object.values(STATE.tickets);
+
+  if (STATE.currentFilter === 'valid') tickets = tickets.filter(t => !t.usedAt);
+  if (STATE.currentFilter === 'used') tickets = tickets.filter(t => t.usedAt);
+
+  if (search) {
+    tickets = tickets.filter(t =>
+      t.id.toLowerCase().includes(search) ||
+      (t.name || '').toLowerCase().includes(search) ||
+      (t.notes || '').toLowerCase().includes(search) ||
+      (t.orderId || '').toLowerCase().includes(search)
+    );
+  }
+
+  if (tickets.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:#64748b;padding:30px;">Nessun ticket</div>';
+    return;
+  }
+
+  const groups = {};
+  tickets.forEach(t => {
+    const key = t.orderId || 'NO-ORDER-' + t.id;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(t);
+  });
+
+  const sortedKeys = Object.keys(groups).sort((a, b) => {
+    const aMax = Math.max(...groups[a].map(t => t.createdAt));
+    const bMax = Math.max(...groups[b].map(t => t.createdAt));
+    return bMax - aMax;
+  });
+
+  list.innerHTML = sortedKeys.map(key => {
+    const group = groups[key].sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+    const first = group[0];
+    const usedCount = group.filter(t => t.usedAt).length;
+    const totalCount = first.orderTotal || group.length;
+
+    return `
+      <div class="order-group">
+        <div class="order-header">
+          <div class="order-name">${escapeHtml(first.name)}</div>
+          <span class="order-count">${usedCount}/${totalCount} usati</span>
+        </div>
+        ${group.map(t => `
+          <div class="ticket-row ${t.usedAt ? 'used' : 'valid'}">
+            <div class="ticket-info">
+              <div class="ticket-meta">
+                ${t.id}${t.orderTotal > 1 ? ` • ${t.orderIndex}/${t.orderTotal}` : ''}
+                ${t.usedAt ? ' • Usato: ' + fmtDate(t.usedAt) : ' • ' + fmtDate(t.createdAt)}
+              </div>
+            </div>
+            <span class="ticket-status ${t.usedAt ? 'used' : 'valid'}">${t.usedAt ? 'USATO' : 'VALIDO'}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
+// ============== EXPORT/IMPORT ==============
+function exportAllCSV() {
+  const tickets = Object.values(STATE.tickets);
+  if (tickets.length === 0) { toast('Nessun ticket'); return; }
+  const rows = [['OrderID', 'TicketID', 'Indice', 'Nome', 'Note', 'Creato', 'Usato', 'Stato']];
+  tickets.forEach(t => {
+    rows.push([
+      t.orderId || '',
+      t.id,
+      t.orderTotal > 1 ? `${t.orderIndex}/${t.orderTotal}` : '1/1',
+      t.name,
+      t.notes || '',
+      fmtDate(t.createdAt),
+      fmtDate(t.usedAt),
+      t.usedAt ? 'Usato' : 'Valido'
+    ]);
+  });
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `backup-tickets-${Date.now()}.csv`; a.click();
+  URL.revokeObjectURL(url);
+
+  const json = JSON.stringify(STATE.tickets, null, 2);
+  const jsonBlob = new Blob([json], { type: 'application/json' });
+  const jsonUrl = URL.createObjectURL(jsonBlob);
+  const a2 = document.createElement('a');
+  a2.href = jsonUrl; a2.download = `backup-tickets-${Date.now()}.json`; a2.click();
+  URL.revokeObjectURL(jsonUrl);
+  toast('✅ Backup CSV + JSON scaricati');
+}
+
+function importBackup() {
+  document.getElementById('import-file').click();
+}
+
+function handleImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      let count = 0;
+      for (const id in data) {
+        const t = data[id];
+        if (!t.orderId) {
+          t.orderId = generateOrderId();
+          t.orderIndex = 1;
+          t.orderTotal = 1;
+        }
+        await saveTicket(t);
+        count++;
+      }
+      updateStats();
+      renderTicketList();
+      toast(`✅ Importati ${count} ticket`);
+    } catch(e) {
+      toast('❌ File non valido');
+    }
+  };
+  reader.readAsText(file);
+}
+
+async function resetUsedStatus() {
+  if (!confirm('Riattivare tutti i ticket usati? Tutti torneranno validi.')) return;
+  let count = 0;
+  for (const id in STATE.tickets) {
+    if (STATE.tickets[id].usedAt) {
+      STATE.tickets[id].usedAt = null;
+      await saveTicket(STATE.tickets[id]);
+      count++;
+    }
+  }
+  toast(`↺ ${count} ticket riattivati`);
+  updateStats();
+  renderTicketList();
+}
+
+async function deleteAllData() {
+  if (!confirm('CANCELLARE TUTTO? Questa azione non è reversibile.')) return;
+  if (!confirm('Davvero sicuro? Tutti i ticket verranno persi.')) return;
+  for (const id in STATE.tickets) await deleteTicket(id);
+  STATE.tickets = {};
+  try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+  updateStats();
+  renderTicketList();
+  toast('🗑 Tutto cancellato');
+}
+
+// ============== INIT ==============
+(async () => {
+  await loadAll();
+  updateStats();
+  renderTicketList();
+})();
+</script>
+
+</body>
+</html>
