@@ -27,7 +27,24 @@
     z-index: 100;
   }
   header h1 { font-size: 20px; font-weight: 700; }
-  header .subtitle { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+  header .subtitle { font-size: 12px; opacity: 0.85; margin-top: 2px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+  .sync-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #fbbf24;
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7);
+    animation: pulse 2s infinite;
+  }
+  .sync-indicator.online { background: #10b981; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  .sync-indicator.offline { background: #ef4444; animation: none; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  }
 
   .tabs {
     display: flex;
@@ -98,11 +115,7 @@
   button.danger { background: #dc2626; }
   button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  .qty-selector {
-    display: flex;
-    gap: 8px;
-    margin-top: 6px;
-  }
+  .qty-selector { display: flex; gap: 8px; margin-top: 6px; }
   .qty-btn {
     flex: 1;
     padding: 14px;
@@ -122,11 +135,7 @@
     color: white;
   }
 
-  .qr-pair {
-    display: grid;
-    gap: 12px;
-    margin-top: 16px;
-  }
+  .qr-pair { display: grid; gap: 12px; margin-top: 16px; }
   .qr-result {
     text-align: center;
     padding: 16px;
@@ -136,8 +145,7 @@
   }
   .qr-result .badge {
     position: absolute;
-    top: 8px;
-    right: 8px;
+    top: 8px; right: 8px;
     background: #ec4899;
     color: white;
     font-size: 11px;
@@ -146,18 +154,8 @@
     border-radius: 6px;
   }
   .qr-result .qr-code { display: inline-block; }
-  .qr-result .qr-name {
-    color: #1e293b;
-    font-size: 14px;
-    font-weight: 700;
-    margin-top: 8px;
-  }
-  .qr-result .qr-id {
-    color: #64748b;
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    margin-top: 4px;
-  }
+  .qr-result .qr-name { color: #1e293b; font-size: 14px; font-weight: 700; margin-top: 8px; }
+  .qr-result .qr-id { color: #64748b; font-family: 'Courier New', monospace; font-size: 11px; margin-top: 4px; }
   .qr-actions { display: flex; gap: 8px; margin-top: 12px; }
   .qr-actions button { flex: 1; }
 
@@ -194,7 +192,6 @@
   .scanner-status.success { background: #16a34a; color: white; animation: flash 0.5s; }
   .scanner-status.warning { background: #ea580c; color: white; animation: flash 0.5s; }
   .scanner-status.error { background: #dc2626; color: white; animation: flash 0.5s; }
-
   @keyframes flash {
     0% { transform: scale(1); }
     50% { transform: scale(1.05); }
@@ -340,14 +337,52 @@
     overflow-x: auto;
   }
 
+  .device-tag {
+    font-size: 10px;
+    background: #334155;
+    color: #94a3b8;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+  }
+
+  .splash {
+    position: fixed;
+    inset: 0;
+    background: #0f172a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    z-index: 9999;
+  }
+  .splash .spinner {
+    width: 40px; height: 40px;
+    border: 4px solid #334155;
+    border-top-color: #ec4899;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .splash p { color: #94a3b8; font-size: 14px; }
+
   #qr-print-area { display: none; }
 </style>
 </head>
 <body>
 
+<div id="splash" class="splash">
+  <div class="spinner"></div>
+  <p>Connessione al cloud...</p>
+</div>
+
 <header>
   <h1>🎟️ Drink Ticket Manager</h1>
-  <div class="subtitle">2 drink per persona • PayPal workflow</div>
+  <div class="subtitle">
+    <span class="sync-indicator" id="sync-dot"></span>
+    <span id="sync-status">Connessione...</span>
+  </div>
 </header>
 
 <div class="tabs">
@@ -365,7 +400,6 @@
   </div>
 </div>
 
-<!-- TAB: GENERA SINGOLO -->
 <div id="panel-generate" class="panel active">
   <div class="card">
     <h2>Nuovo ordine</h2>
@@ -398,20 +432,20 @@
       <summary>ℹ️ Come funziona?</summary>
       <div class="help-text">
         <strong>1.</strong> Ricevi pagamento PayPal sulla mail.<br>
-        <strong>2.</strong> Inserisci nome del cliente e scegli n° drink (default 2).<br>
+        <strong>2.</strong> Inserisci nome del cliente e scegli n° drink.<br>
         <strong>3.</strong> Genera i QR code accoppiati allo stesso ordine.<br>
         <strong>4.</strong> Scarica/condividi l'immagine via WhatsApp o email.<br>
-        <strong>5.</strong> Al bar, scansiona ogni QR singolarmente — ognuno vale 1 drink.
+        <strong>5.</strong> Al bar, scansiona ogni QR — ognuno vale 1 drink.<br><br>
+        🌐 <strong>I dati sono sincronizzati nel cloud</strong>: puoi generare da un dispositivo e bruciare da un altro.
       </div>
     </details>
   </div>
 </div>
 
-<!-- TAB: LISTA EXCEL -->
 <div id="panel-bulk" class="panel">
   <div class="card">
     <h2>Carica lista ordini</h2>
-    <p class="help-text">Ogni riga del file = <strong>1 ordine</strong>. Per default ogni ordine genera <strong>2 ticket</strong>. Puoi sovrascrivere il numero per riga aggiungendo una colonna <code>Drink</code> o <code>Quantita</code>.</p>
+    <p class="help-text">Ogni riga del file = <strong>1 ordine</strong>. Per default ogni ordine genera <strong>2 ticket</strong>. Puoi sovrascrivere il numero per riga aggiungendo una colonna <code>Drink</code>.</p>
 
     <div class="template-box">Nome           | Email             | Drink | Note
 Mario Rossi   | mario@mail.com    | 2     | 
@@ -426,10 +460,10 @@ Andrea Verdi  | andrea@mail.com   | 4     | tavolo VIP</div>
       <input type="file" id="excel-file" accept=".xlsx,.xls,.csv" onchange="loadExcel(event)">
     </label>
 
-    <label>Oppure incolla nomi (uno per riga, 2 drink default)</label>
+    <label>Oppure incolla nomi (uno per riga)</label>
     <textarea id="bulk-names" rows="5" placeholder="Mario Rossi&#10;Lucia Bianchi&#10;Andrea Verdi"></textarea>
 
-    <label>Drink per persona (se non specificato per riga)</label>
+    <label>Drink per persona (default)</label>
     <select id="default-qty">
       <option value="1">1 drink</option>
       <option value="2" selected>2 drink</option>
@@ -438,14 +472,13 @@ Andrea Verdi  | andrea@mail.com   | 4     | tavolo VIP</div>
     </select>
 
     <button onclick="generateBulk()">🎟️ Genera tickets in batch</button>
-    <button class="secondary" onclick="exportBulkPDF()" id="export-pdf-btn" style="display:none;">📄 PDF stampabile (coppie affiancate)</button>
+    <button class="secondary" onclick="exportBulkPDF()" id="export-pdf-btn" style="display:none;">📄 PDF stampabile</button>
     <button class="secondary" onclick="exportBulkCSV()" id="export-csv-btn" style="display:none;">📊 CSV con ID ticket</button>
 
     <div id="bulk-status" style="margin-top:12px;"></div>
   </div>
 </div>
 
-<!-- TAB: SCANNER -->
 <div id="panel-scan" class="panel">
   <div class="card">
     <h2>Scanner QR</h2>
@@ -461,7 +494,7 @@ Andrea Verdi  | andrea@mail.com   | 4     | tavolo VIP</div>
 
     <details>
       <summary>🔍 Inserimento manuale</summary>
-      <label>ID ticket (se non riesci a scansionare)</label>
+      <label>ID ticket</label>
       <input type="text" id="manual-code" placeholder="es. DT-XXXXXXXX" autocomplete="off">
       <button class="secondary" onclick="manualValidate()">Valida manualmente</button>
     </details>
@@ -470,7 +503,6 @@ Andrea Verdi  | andrea@mail.com   | 4     | tavolo VIP</div>
   </div>
 </div>
 
-<!-- TAB: LISTA TICKETS -->
 <div id="panel-list" class="panel">
   <div class="stats">
     <div class="stat">
@@ -504,20 +536,61 @@ Andrea Verdi  | andrea@mail.com   | 4     | tavolo VIP</div>
 
     <details>
       <summary>⚙️ Strumenti avanzati</summary>
-      <button class="secondary" onclick="exportAllCSV()">📥 Esporta tutto (CSV + JSON)</button>
-      <button class="secondary" onclick="importBackup()">📤 Importa backup</button>
+      <button class="secondary" onclick="exportAllCSV()">📥 Esporta tutto (CSV)</button>
       <button class="danger" onclick="resetUsedStatus()">↺ Riattiva tutti i ticket usati</button>
       <button class="danger" onclick="deleteAllData()">🗑 Cancella tutto</button>
-      <input type="file" id="import-file" accept=".json" style="display:none;" onchange="handleImport(event)">
+    </details>
+
+    <details>
+      <summary>📱 Dispositivo</summary>
+      <div class="help-text">
+        Nome di questo dispositivo (mostrato nei log di chi brucia un ticket):
+      </div>
+      <input type="text" id="device-name-input" placeholder="es. Telefono Bar 1" onchange="setDeviceName(this.value)">
     </details>
   </div>
 </div>
 
 <div id="qr-print-area"></div>
 
+<!-- Firebase + App logic -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot,
+  runTransaction, getDocs, query, enableIndexedDbPersistence
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+// === FIREBASE CONFIG ===
+const firebaseConfig = {
+  apiKey: "AIzaSyBgpHpZyuYAJmLJYTnwlWSNlz0R6JRQ1Z0",
+  authDomain: "drink-tickets-4459c.firebaseapp.com",
+  projectId: "drink-tickets-4459c",
+  storageBucket: "drink-tickets-4459c.firebasestorage.app",
+  messagingSenderId: "653465832638",
+  appId: "1:653465832638:web:fb2a6362763941a9a662ef"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+
+// Enable offline persistence (so app works also without internet, syncs when back online)
+try {
+  await enableIndexedDbPersistence(db);
+} catch (e) {
+  console.warn('Persistence not available:', e.code);
+}
+
+const ticketsCol = collection(db, 'tickets');
+
+// Expose to global scope
+window.firebase = { db, collection, doc, setDoc, deleteDoc, onSnapshot, runTransaction, getDocs, query, ticketsCol };
+window.firebaseReady = true;
+window.dispatchEvent(new Event('firebase-ready'));
+</script>
+
 <script>
 // ============== STATE ==============
-const STORAGE_KEY = 'tickets';
 const STATE = {
   tickets: {},
   currentFilter: 'all',
@@ -525,53 +598,11 @@ const STATE = {
   videoStream: null,
   currentOrder: null,
   bulkGenerated: [],
-  selectedQty: 2
+  selectedQty: 2,
+  loaded: false,
+  online: navigator.onLine,
+  deviceName: localStorage.getItem('deviceName') || ''
 };
-
-// ============== STORAGE ==============
-async function loadAll() {
-  try {
-    if (window.storage && typeof window.storage.list === 'function') {
-      const result = await window.storage.list('tk:');
-      if (result && result.keys) {
-        for (const key of result.keys) {
-          try {
-            const item = await window.storage.get(key);
-            if (item && item.value) {
-              const t = JSON.parse(item.value);
-              STATE.tickets[t.id] = t;
-            }
-          } catch(e) {}
-        }
-        return;
-      }
-    }
-  } catch(e) {}
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) STATE.tickets = JSON.parse(saved);
-  } catch(e) {}
-}
-
-async function saveTicket(ticket) {
-  STATE.tickets[ticket.id] = ticket;
-  try {
-    if (window.storage && typeof window.storage.set === 'function') {
-      await window.storage.set('tk:' + ticket.id, JSON.stringify(ticket));
-    }
-  } catch(e) {}
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE.tickets)); } catch(e) {}
-}
-
-async function deleteTicket(id) {
-  delete STATE.tickets[id];
-  try {
-    if (window.storage && typeof window.storage.delete === 'function') {
-      await window.storage.delete('tk:' + id);
-    }
-  } catch(e) {}
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE.tickets)); } catch(e) {}
-}
 
 // ============== UTILS ==============
 function generateId() {
@@ -608,6 +639,107 @@ function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+function setSyncStatus(state, msg) {
+  const dot = document.getElementById('sync-dot');
+  const text = document.getElementById('sync-status');
+  dot.className = 'sync-indicator ' + state;
+  text.textContent = msg;
+}
+
+function setDeviceName(name) {
+  STATE.deviceName = name.trim();
+  localStorage.setItem('deviceName', STATE.deviceName);
+  toast('✅ Nome dispositivo salvato');
+}
+
+// ============== FIREBASE SYNC ==============
+function startFirebaseSync() {
+  const fb = window.firebase;
+  if (!fb) {
+    setSyncStatus('offline', '❌ Firebase non disponibile');
+    return;
+  }
+
+  setSyncStatus('', '🔄 Caricamento...');
+
+  // Real-time listener: gets ALL changes from any device automatically
+  fb.onSnapshot(fb.ticketsCol, (snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      const data = change.doc.data();
+      if (change.type === 'removed') {
+        delete STATE.tickets[change.doc.id];
+      } else {
+        STATE.tickets[change.doc.id] = data;
+      }
+    });
+    if (!STATE.loaded) {
+      STATE.loaded = true;
+      document.getElementById('splash').style.display = 'none';
+    }
+    setSyncStatus('online', `🌐 ${Object.keys(STATE.tickets).length} ticket sincronizzati`);
+    updateStats();
+    if (document.getElementById('panel-list').classList.contains('active')) {
+      renderTicketList();
+    }
+  }, (error) => {
+    console.error('Sync error:', error);
+    setSyncStatus('offline', '❌ Errore sync: ' + error.code);
+    if (!STATE.loaded) {
+      STATE.loaded = true;
+      document.getElementById('splash').style.display = 'none';
+      toast('❌ Connessione fallita. Controlla la config Firebase.');
+    }
+  });
+}
+
+async function saveTicket(ticket) {
+  STATE.tickets[ticket.id] = ticket;
+  const fb = window.firebase;
+  if (!fb) throw new Error('Firebase not ready');
+  await fb.setDoc(fb.doc(fb.db, 'tickets', ticket.id), ticket);
+}
+
+async function saveTicketsBatch(tickets) {
+  const fb = window.firebase;
+  if (!fb) throw new Error('Firebase not ready');
+  // Save sequentially but quickly
+  for (const t of tickets) {
+    STATE.tickets[t.id] = t;
+    await fb.setDoc(fb.doc(fb.db, 'tickets', t.id), t);
+  }
+}
+
+async function deleteTicketCloud(id) {
+  delete STATE.tickets[id];
+  const fb = window.firebase;
+  if (!fb) return;
+  await fb.deleteDoc(fb.doc(fb.db, 'tickets', id));
+}
+
+// Atomic burn — uses a transaction so two devices cannot burn the same ticket
+async function atomicBurnTicket(id, deviceName) {
+  const fb = window.firebase;
+  if (!fb) throw new Error('Firebase not ready');
+  const ref = fb.doc(fb.db, 'tickets', id);
+  return await fb.runTransaction(fb.db, async (transaction) => {
+    const docSnap = await transaction.get(ref);
+    if (!docSnap.exists()) {
+      return { success: false, reason: 'not_found' };
+    }
+    const ticket = docSnap.data();
+    if (ticket.usedAt) {
+      return { success: false, reason: 'already_used', ticket };
+    }
+    const now = Date.now();
+    transaction.update(ref, {
+      usedAt: now,
+      usedBy: deviceName || 'unknown'
+    });
+    return { success: true, ticket: { ...ticket, usedAt: now, usedBy: deviceName } };
+  });
+}
+
+// ============== TAB SWITCH ==============
 function switchTab(tab, btn) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -617,7 +749,6 @@ function switchTab(tab, btn) {
   if (tab !== 'scan') stopScanner();
 }
 
-// ============== QTY SELECTOR ==============
 function setQty(n) {
   STATE.selectedQty = n;
   document.querySelectorAll('.qty-btn').forEach(b => {
@@ -625,7 +756,7 @@ function setQty(n) {
   });
 }
 
-// ============== SINGLE / ORDER GENERATE ==============
+// ============== SINGLE GENERATE ==============
 async function generateSingle() {
   const name = document.getElementById('single-name').value.trim() || 'Anonimo';
   const notes = document.getElementById('single-notes').value.trim();
@@ -634,7 +765,7 @@ async function generateSingle() {
   const tickets = [];
 
   for (let i = 0; i < qty; i++) {
-    const ticket = {
+    tickets.push({
       id: generateId(),
       orderId,
       orderIndex: i + 1,
@@ -642,19 +773,26 @@ async function generateSingle() {
       name,
       notes,
       createdAt: Date.now() + i,
+      createdBy: STATE.deviceName || 'unknown',
       usedAt: null,
+      usedBy: null,
       source: 'manual'
-    };
-    await saveTicket(ticket);
-    tickets.push(ticket);
+    });
   }
 
-  STATE.currentOrder = { orderId, name, notes, tickets, qty };
-  renderCurrentOrder();
-  document.getElementById('single-name').value = '';
-  document.getElementById('single-notes').value = '';
-  toast(`✅ Ordine ${orderId}: ${qty} ticket generati`);
-  updateStats();
+  toast('⏳ Salvataggio nel cloud...');
+  try {
+    await saveTicketsBatch(tickets);
+    STATE.currentOrder = { orderId, name, notes, tickets, qty };
+    renderCurrentOrder();
+    document.getElementById('single-name').value = '';
+    document.getElementById('single-notes').value = '';
+    toast(`✅ Ordine ${orderId}: ${qty} ticket creati`);
+    updateStats();
+  } catch(e) {
+    console.error(e);
+    toast('❌ Errore salvataggio: ' + e.message);
+  }
 }
 
 function renderCurrentOrder() {
@@ -676,10 +814,7 @@ function renderCurrentOrder() {
     `;
     pair.appendChild(wrapper);
     new QRCode(document.getElementById('qr-' + ticket.id), {
-      text: ticket.id,
-      width: 180,
-      height: 180,
-      correctLevel: QRCode.CorrectLevel.H
+      text: ticket.id, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.H
     });
   });
 }
@@ -692,7 +827,6 @@ function composeOrderImage(order) {
   const rows = Math.ceil(qty / cols);
   const W = ticketW * cols + 40 * (cols + 1);
   const H = ticketH * rows + 40 * (rows + 1);
-
   const c = document.createElement('canvas');
   c.width = W; c.height = H;
   const ctx = c.getContext('2d');
@@ -716,11 +850,9 @@ function composeOrderImage(order) {
     ctx.font = 'bold 30px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('🎟️ DRINK TICKET', x + ticketW/2, y + 60);
-
     ctx.font = 'bold 18px sans-serif';
     ctx.fillStyle = '#ec4899';
     ctx.fillText(`${idx + 1} di ${qty}`, x + ticketW/2, y + 90);
-
     ctx.font = '15px sans-serif';
     ctx.fillStyle = '#64748b';
     ctx.fillText('Vale per 1 consumazione', x + ticketW/2, y + 115);
@@ -745,17 +877,14 @@ function composeOrderImage(order) {
     ctx.font = 'bold 26px monospace';
     ctx.fillStyle = '#ec4899';
     ctx.fillText(ticket.id, x + ticketW/2, y + 580);
-
     ctx.font = '13px monospace';
     ctx.fillStyle = '#94a3b8';
     ctx.fillText('Ordine: ' + orderId, x + ticketW/2, y + 610);
-
     ctx.font = '13px sans-serif';
     ctx.fillStyle = '#94a3b8';
     ctx.fillText('Presenta questo QR al bar', x + ticketW/2, y + 645);
     ctx.fillText(fmtDate(ticket.createdAt), x + ticketW/2, y + 670);
   });
-
   return c;
 }
 
@@ -842,7 +971,7 @@ function loadExcel(event) {
 async function generateBulk() {
   const lines = document.getElementById('bulk-names').value.split('\n').map(l => l.trim()).filter(Boolean);
   if (lines.length === 0) { toast('Inserisci almeno un nome'); return; }
-  if (lines.length > 500) { toast('Massimo 500 ordini per volta'); return; }
+  if (lines.length > 300) { toast('Massimo 300 ordini per volta (limite cloud)'); return; }
 
   const defaultQty = parseInt(document.getElementById('default-qty').value) || 2;
   STATE.bulkGenerated = [];
@@ -850,6 +979,8 @@ async function generateBulk() {
   status.innerHTML = '<div class="card">⏳ Generazione in corso...</div>';
 
   let totalTickets = 0;
+  const allTickets = [];
+
   for (let i = 0; i < lines.length; i++) {
     const name = lines[i];
     let qty = defaultQty;
@@ -873,7 +1004,7 @@ async function generateBulk() {
     const fullNotes = email ? (notes ? notes + ' | ' + email : email) : notes;
 
     for (let j = 0; j < qty; j++) {
-      const ticket = {
+      allTickets.push({
         id: generateId(),
         orderId,
         orderIndex: j + 1,
@@ -881,21 +1012,36 @@ async function generateBulk() {
         name,
         notes: fullNotes,
         createdAt: Date.now() + i * 100 + j,
+        createdBy: STATE.deviceName || 'unknown',
         usedAt: null,
+        usedBy: null,
         source: 'bulk'
-      };
-      await saveTicket(ticket);
-      STATE.bulkGenerated.push(ticket);
+      });
       totalTickets++;
     }
   }
 
-  status.innerHTML = `<div class="card" style="background:#16a34a;color:white;">✅ ${lines.length} ordini → ${totalTickets} ticket</div>`;
-  document.getElementById('export-pdf-btn').style.display = 'block';
-  document.getElementById('export-csv-btn').style.display = 'block';
-  parsedExcelData = null;
-  updateStats();
-  toast(`✅ ${totalTickets} ticket creati`);
+  // Save with progress feedback
+  try {
+    let saved = 0;
+    for (const t of allTickets) {
+      await saveTicket(t);
+      STATE.bulkGenerated.push(t);
+      saved++;
+      if (saved % 5 === 0) {
+        status.innerHTML = `<div class="card">⏳ Salvati ${saved}/${totalTickets}...</div>`;
+      }
+    }
+    status.innerHTML = `<div class="card" style="background:#16a34a;color:white;">✅ ${lines.length} ordini → ${totalTickets} ticket nel cloud</div>`;
+    document.getElementById('export-pdf-btn').style.display = 'block';
+    document.getElementById('export-csv-btn').style.display = 'block';
+    parsedExcelData = null;
+    updateStats();
+    toast(`✅ ${totalTickets} ticket creati`);
+  } catch(e) {
+    console.error(e);
+    status.innerHTML = `<div class="card" style="background:#dc2626;color:white;">❌ Errore: ${e.message}</div>`;
+  }
 }
 
 async function renderTicketsToPDF(pdf, tickets) {
@@ -1079,6 +1225,9 @@ async function validateTicket(rawCode) {
     : '';
 
   if (ticket.usedAt) {
+    const usedByInfo = ticket.usedBy && ticket.usedBy !== 'unknown'
+      ? ` da <strong>${escapeHtml(ticket.usedBy)}</strong>`
+      : '';
     setStatus('⚠️ GIÀ USATO il ' + fmtDate(ticket.usedAt), 'warning');
     document.getElementById('last-scan-info').innerHTML = `
       <div class="card" style="background:#7c2d12;border-color:#ea580c;">
@@ -1086,7 +1235,7 @@ async function validateTicket(rawCode) {
         <strong>${escapeHtml(ticket.name)}</strong> ${ticket.orderTotal > 1 ? `(${ticket.orderIndex}/${ticket.orderTotal})` : ''}<br>
         <code>${ticket.id}</code><br>
         ${siblingInfo}
-        Usato il: ${fmtDate(ticket.usedAt)}
+        Usato il: ${fmtDate(ticket.usedAt)}${usedByInfo}
       </div>`;
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     return;
@@ -1107,29 +1256,50 @@ async function validateTicket(rawCode) {
 }
 
 async function confirmBurn(id) {
-  const ticket = STATE.tickets[id];
-  if (!ticket) return;
-  if (ticket.usedAt) { toast('Già usato!'); return; }
-  ticket.usedAt = Date.now();
-  await saveTicket(ticket);
+  toast('⏳ Validazione...');
+  try {
+    const result = await atomicBurnTicket(id, STATE.deviceName || 'unknown');
 
-  const siblings = getOrderSiblings(ticket);
-  const remaining = siblings.filter(s => !s.usedAt).length;
-  const remainingMsg = ticket.orderTotal > 1
-    ? `<br><small>Restano ${remaining}/${ticket.orderTotal} drink per ${escapeHtml(ticket.name)}</small>`
-    : '';
+    if (!result.success) {
+      if (result.reason === 'already_used') {
+        const t = result.ticket;
+        const usedByInfo = t.usedBy && t.usedBy !== 'unknown' ? ` da ${t.usedBy}` : '';
+        setStatus('⚠️ Già bruciato' + usedByInfo + ' il ' + fmtDate(t.usedAt), 'warning');
+        document.getElementById('last-scan-info').innerHTML = `
+          <div class="card" style="background:#7c2d12;border-color:#ea580c;">
+            <strong>⚠️ Qualcun altro ha già bruciato questo ticket!</strong><br>
+            ${escapeHtml(t.name)} • ${fmtDate(t.usedAt)}${usedByInfo ? ' • ' + escapeHtml(t.usedBy) : ''}
+          </div>`;
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
+      } else {
+        toast('❌ Ticket non trovato');
+      }
+      lastDetected = null;
+      return;
+    }
 
-  setStatus('🔥 BRUCIATO! - ' + ticket.name, 'success');
-  document.getElementById('last-scan-info').innerHTML = `
-    <div class="card" style="background:#14532d;border-color:#16a34a;">
-      <strong>🔥 Ticket bruciato!</strong><br>
-      ${escapeHtml(ticket.name)} ${ticket.orderTotal > 1 ? `(${ticket.orderIndex}/${ticket.orderTotal})` : ''}<br>
-      <code>${ticket.id}</code>
-      ${remainingMsg}
-    </div>`;
-  if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 300]);
-  updateStats();
-  lastDetected = null;
+    const ticket = result.ticket;
+    const siblings = getOrderSiblings(ticket);
+    const remaining = siblings.filter(s => !s.usedAt).length;
+    const remainingMsg = ticket.orderTotal > 1
+      ? `<br><small>Restano ${remaining}/${ticket.orderTotal} drink per ${escapeHtml(ticket.name)}</small>`
+      : '';
+
+    setStatus('🔥 BRUCIATO! - ' + ticket.name, 'success');
+    document.getElementById('last-scan-info').innerHTML = `
+      <div class="card" style="background:#14532d;border-color:#16a34a;">
+        <strong>🔥 Ticket bruciato!</strong><br>
+        ${escapeHtml(ticket.name)} ${ticket.orderTotal > 1 ? `(${ticket.orderIndex}/${ticket.orderTotal})` : ''}<br>
+        <code>${ticket.id}</code>
+        ${remainingMsg}
+      </div>`;
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 300]);
+    updateStats();
+    lastDetected = null;
+  } catch(e) {
+    console.error(e);
+    toast('❌ Errore: ' + e.message);
+  }
 }
 
 function cancelScan() {
@@ -1215,7 +1385,7 @@ function renderTicketList() {
             <div class="ticket-info">
               <div class="ticket-meta">
                 ${t.id}${t.orderTotal > 1 ? ` • ${t.orderIndex}/${t.orderTotal}` : ''}
-                ${t.usedAt ? ' • Usato: ' + fmtDate(t.usedAt) : ' • ' + fmtDate(t.createdAt)}
+                ${t.usedAt ? ' • Usato: ' + fmtDate(t.usedAt) + (t.usedBy && t.usedBy !== 'unknown' ? ' (' + escapeHtml(t.usedBy) + ')' : '') : ' • ' + fmtDate(t.createdAt)}
               </div>
             </div>
             <span class="ticket-status ${t.usedAt ? 'used' : 'valid'}">${t.usedAt ? 'USATO' : 'VALIDO'}</span>
@@ -1226,11 +1396,11 @@ function renderTicketList() {
   }).join('');
 }
 
-// ============== EXPORT/IMPORT ==============
+// ============== EXPORT ==============
 function exportAllCSV() {
   const tickets = Object.values(STATE.tickets);
   if (tickets.length === 0) { toast('Nessun ticket'); return; }
-  const rows = [['OrderID', 'TicketID', 'Indice', 'Nome', 'Note', 'Creato', 'Usato', 'Stato']];
+  const rows = [['OrderID', 'TicketID', 'Indice', 'Nome', 'Note', 'Creato', 'CreatoDa', 'Usato', 'UsatoDa', 'Stato']];
   tickets.forEach(t => {
     rows.push([
       t.orderId || '',
@@ -1239,7 +1409,9 @@ function exportAllCSV() {
       t.name,
       t.notes || '',
       fmtDate(t.createdAt),
+      t.createdBy || '',
       fmtDate(t.usedAt),
+      t.usedBy || '',
       t.usedAt ? 'Usato' : 'Valido'
     ]);
   });
@@ -1249,55 +1421,19 @@ function exportAllCSV() {
   const a = document.createElement('a');
   a.href = url; a.download = `backup-tickets-${Date.now()}.csv`; a.click();
   URL.revokeObjectURL(url);
-
-  const json = JSON.stringify(STATE.tickets, null, 2);
-  const jsonBlob = new Blob([json], { type: 'application/json' });
-  const jsonUrl = URL.createObjectURL(jsonBlob);
-  const a2 = document.createElement('a');
-  a2.href = jsonUrl; a2.download = `backup-tickets-${Date.now()}.json`; a2.click();
-  URL.revokeObjectURL(jsonUrl);
-  toast('✅ Backup CSV + JSON scaricati');
-}
-
-function importBackup() {
-  document.getElementById('import-file').click();
-}
-
-function handleImport(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    try {
-      const data = JSON.parse(e.target.result);
-      let count = 0;
-      for (const id in data) {
-        const t = data[id];
-        if (!t.orderId) {
-          t.orderId = generateOrderId();
-          t.orderIndex = 1;
-          t.orderTotal = 1;
-        }
-        await saveTicket(t);
-        count++;
-      }
-      updateStats();
-      renderTicketList();
-      toast(`✅ Importati ${count} ticket`);
-    } catch(e) {
-      toast('❌ File non valido');
-    }
-  };
-  reader.readAsText(file);
+  toast('✅ CSV scaricato');
 }
 
 async function resetUsedStatus() {
-  if (!confirm('Riattivare tutti i ticket usati? Tutti torneranno validi.')) return;
+  if (!confirm('Riattivare tutti i ticket usati nel cloud?')) return;
   let count = 0;
+  toast('⏳ Reset in corso...');
   for (const id in STATE.tickets) {
     if (STATE.tickets[id].usedAt) {
-      STATE.tickets[id].usedAt = null;
-      await saveTicket(STATE.tickets[id]);
+      const t = STATE.tickets[id];
+      t.usedAt = null;
+      t.usedBy = null;
+      await saveTicket(t);
       count++;
     }
   }
@@ -1307,22 +1443,68 @@ async function resetUsedStatus() {
 }
 
 async function deleteAllData() {
-  if (!confirm('CANCELLARE TUTTO? Questa azione non è reversibile.')) return;
-  if (!confirm('Davvero sicuro? Tutti i ticket verranno persi.')) return;
-  for (const id in STATE.tickets) await deleteTicket(id);
+  if (!confirm('CANCELLARE TUTTO dal cloud? Azione irreversibile.')) return;
+  if (!confirm('Davvero sicuro? Tutti i ticket verranno persi su tutti i dispositivi.')) return;
+  toast('⏳ Cancellazione...');
+  const ids = Object.keys(STATE.tickets);
+  for (const id of ids) await deleteTicketCloud(id);
   STATE.tickets = {};
-  try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
   updateStats();
   renderTicketList();
-  toast('🗑 Tutto cancellato');
+  toast('🗑 Tutto cancellato dal cloud');
 }
 
 // ============== INIT ==============
-(async () => {
-  await loadAll();
-  updateStats();
-  renderTicketList();
-})();
+window.switchTab = switchTab;
+window.setQty = setQty;
+window.generateSingle = generateSingle;
+window.downloadOrderImage = downloadOrderImage;
+window.shareOrderImage = shareOrderImage;
+window.downloadOrderPDF = downloadOrderPDF;
+window.downloadTemplate = downloadTemplate;
+window.loadExcel = loadExcel;
+window.generateBulk = generateBulk;
+window.exportBulkPDF = exportBulkPDF;
+window.exportBulkCSV = exportBulkCSV;
+window.startScanner = startScanner;
+window.stopScanner = stopScanner;
+window.confirmBurn = confirmBurn;
+window.cancelScan = cancelScan;
+window.manualValidate = manualValidate;
+window.filterTickets = filterTickets;
+window.renderTicketList = renderTicketList;
+window.exportAllCSV = exportAllCSV;
+window.resetUsedStatus = resetUsedStatus;
+window.deleteAllData = deleteAllData;
+window.setDeviceName = setDeviceName;
+
+// Initialize device name input
+document.getElementById('device-name-input').value = STATE.deviceName;
+
+// Online/offline indicator
+window.addEventListener('online', () => {
+  STATE.online = true;
+  setSyncStatus('online', `🌐 ${Object.keys(STATE.tickets).length} ticket sincronizzati`);
+});
+window.addEventListener('offline', () => {
+  STATE.online = false;
+  setSyncStatus('offline', '⚠️ Offline (le modifiche si sincronizzeranno al ritorno)');
+});
+
+// Wait for Firebase module to be ready, then start sync
+if (window.firebaseReady) {
+  startFirebaseSync();
+} else {
+  window.addEventListener('firebase-ready', startFirebaseSync);
+  // Timeout fallback
+  setTimeout(() => {
+    if (!STATE.loaded) {
+      document.getElementById('splash').style.display = 'none';
+      setSyncStatus('offline', '❌ Timeout connessione');
+      toast('❌ Firebase non risponde. Controlla connessione e config.');
+    }
+  }, 15000);
+}
 </script>
 
 </body>
