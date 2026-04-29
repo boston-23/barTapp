@@ -489,31 +489,33 @@ Andrea Verdi  | andrea@mail.com   | 4     | tavolo VIP</div>
 
 <!-- Firebase init -->
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import {
-  getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot,
-  enableIndexedDbPersistence
-} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+try {
+  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js");
+  const { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } =
+    await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBgpHpZyuYAJmLJYTnwlWSNlz0R6JRQ1Z0",
-  authDomain: "drink-tickets-4459c.firebaseapp.com",
-  projectId: "drink-tickets-4459c",
-  storageBucket: "drink-tickets-4459c.firebasestorage.app",
-  messagingSenderId: "653465832638",
-  appId: "1:653465832638:web:fb2a6362763941a9a662ef"
-};
+  const firebaseConfig = {
+    apiKey: "AIzaSyBgpHpZyuYAJmLJYTnwlWSNlz0R6JRQ1Z0",
+    authDomain: "drink-tickets-4459c.firebaseapp.com",
+    projectId: "drink-tickets-4459c",
+    storageBucket: "drink-tickets-4459c.firebasestorage.app",
+    messagingSenderId: "653465832638",
+    appId: "1:653465832638:web:fb2a6362763941a9a662ef"
+  };
 
-const fbApp = initializeApp(firebaseConfig);
-const db = getFirestore(fbApp);
+  const fbApp = initializeApp(firebaseConfig);
+  const db = getFirestore(fbApp);
+  const ticketsCol = collection(db, 'tickets');
 
-try { await enableIndexedDbPersistence(db); } catch (e) { console.warn('Persistence:', e.code); }
-
-const ticketsCol = collection(db, 'tickets');
-
-window.firebase = { db, collection, doc, setDoc, deleteDoc, onSnapshot, ticketsCol };
-window.firebaseReady = true;
-window.dispatchEvent(new Event('firebase-ready'));
+  window.firebase = { db, collection, doc, setDoc, deleteDoc, onSnapshot, ticketsCol };
+  window.firebaseReady = true;
+  console.log('✅ Firebase initialized successfully');
+  window.dispatchEvent(new Event('firebase-ready'));
+} catch (err) {
+  console.error('❌ Firebase initialization failed:', err);
+  window.firebaseError = err.message || String(err);
+  window.dispatchEvent(new Event('firebase-error'));
+}
 </script>
 
 <script>
@@ -1120,16 +1122,26 @@ window.setDeviceName = setDeviceName;
 
 document.getElementById('device-name-input').value = STATE.deviceName;
 
-if (window.firebaseReady) startFirebaseSync();
-else {
+if (window.firebaseReady) {
+  startFirebaseSync();
+} else if (window.firebaseError) {
+  document.getElementById('splash').style.display = 'none';
+  setSyncStatus('offline', '❌ Errore Firebase');
+  toast('❌ ' + window.firebaseError, 6000);
+} else {
   window.addEventListener('firebase-ready', startFirebaseSync);
+  window.addEventListener('firebase-error', () => {
+    document.getElementById('splash').style.display = 'none';
+    setSyncStatus('offline', '❌ Errore caricamento Firebase');
+    toast('❌ ' + (window.firebaseError || 'Modulo non caricato'), 6000);
+  });
   setTimeout(() => {
-    if (!STATE.loaded) {
+    if (!STATE.loaded && !window.firebaseError) {
       document.getElementById('splash').style.display = 'none';
-      setSyncStatus('offline', '❌ Timeout');
-      toast('❌ Firebase non risponde');
+      setSyncStatus('offline', '❌ Timeout — modulo Firebase non caricato');
+      toast('❌ Firebase non risponde. Apri la console (F12) per dettagli.', 6000);
     }
-  }, 15000);
+  }, 8000);
 }
 </script>
 
