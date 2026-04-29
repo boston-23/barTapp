@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -28,309 +29,326 @@
   header h1 { font-size: 20px; font-weight: 700; }
   header .subtitle { font-size: 12px; opacity: 0.85; margin-top: 2px; display: flex; align-items: center; justify-content: center; gap: 6px; }
 
-  .sync-indicator {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #fbbf24;
-    animation: pulse 2s infinite;
-  }
-  .sync-indicator.online { background: #10b981; }
-  .sync-indicator.offline { background: #ef4444; animation: none; }
-  @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-    70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-  }
+.sync-indicator {
+display: inline-block;
+width: 8px;
+height: 8px;
+border-radius: 50%;
+background: #fbbf24;
+animation: pulse 2s infinite;
+}
+.sync-indicator.online { background: #10b981; }
+.sync-indicator.offline { background: #ef4444; animation: none; }
+@keyframes pulse {
+0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
 
-  .tabs {
-    display: flex;
-    background: #1e293b;
-    position: sticky;
-    top: 60px;
-    z-index: 90;
-    border-bottom: 1px solid #334155;
-  }
-  .tab {
-    flex: 1;
-    padding: 14px 8px;
-    text-align: center;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-    color: #94a3b8;
-    border-bottom: 3px solid transparent;
-    transition: all 0.2s;
-  }
-  .tab.active {
-    color: #f9fafb;
-    border-bottom-color: #ec4899;
-    background: #0f172a;
-  }
-  .tab-icon { font-size: 18px; display: block; margin-bottom: 2px; }
+.tabs {
+display: flex;
+background: #1e293b;
+position: sticky;
+top: 60px;
+z-index: 90;
+border-bottom: 1px solid #334155;
+}
+.tab {
+flex: 1;
+padding: 14px 8px;
+text-align: center;
+cursor: pointer;
+font-size: 13px;
+font-weight: 600;
+color: #94a3b8;
+border-bottom: 3px solid transparent;
+transition: all 0.2s;
+}
+.tab.active {
+color: #f9fafb;
+border-bottom-color: #ec4899;
+background: #0f172a;
+}
+.tab-icon { font-size: 18px; display: block; margin-bottom: 2px; }
 
-  .panel { display: none; padding: 16px; max-width: 600px; margin: 0 auto; }
-  .panel.active { display: block; }
+.panel { display: none; padding: 16px; max-width: 600px; margin: 0 auto; }
+.panel.active { display: block; }
 
-  .card {
-    background: #1e293b;
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 12px;
-    border: 1px solid #334155;
-  }
+.card {
+background: #1e293b;
+border-radius: 12px;
+padding: 16px;
+margin-bottom: 12px;
+border: 1px solid #334155;
+}
 
-  h2 { font-size: 16px; margin-bottom: 12px; color: #f1f5f9; }
-  label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 6px; margin-top: 10px; }
-  input, textarea, select {
-    width: 100%;
-    padding: 12px;
-    background: #0f172a;
-    border: 1px solid #334155;
-    border-radius: 8px;
-    color: #e2e8f0;
-    font-size: 15px;
-    font-family: inherit;
-  }
-  input:focus, textarea:focus, select:focus { outline: none; border-color: #ec4899; }
+h2 { font-size: 16px; margin-bottom: 12px; color: #f1f5f9; }
+label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 6px; margin-top: 10px; }
+input, textarea, select {
+width: 100%;
+padding: 12px;
+background: #0f172a;
+border: 1px solid #334155;
+border-radius: 8px;
+color: #e2e8f0;
+font-size: 15px;
+font-family: inherit;
+}
+input:focus, textarea:focus, select:focus { outline: none; border-color: #ec4899; }
 
-  button {
-    background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
-    color: white;
-    border: none;
-    padding: 14px;
-    border-radius: 10px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    width: 100%;
-    margin-top: 12px;
-    transition: transform 0.1s;
-  }
-  button:active { transform: scale(0.98); }
-  button.secondary { background: #334155; }
-  button.danger { background: #dc2626; }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
+button {
+background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+color: white;
+border: none;
+padding: 14px;
+border-radius: 10px;
+font-size: 15px;
+font-weight: 600;
+cursor: pointer;
+width: 100%;
+margin-top: 12px;
+transition: transform 0.1s;
+}
+button:active { transform: scale(0.98); }
+button.secondary { background: #334155; }
+button.danger { background: #dc2626; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  .qty-selector { display: flex; gap: 8px; margin-top: 6px; }
-  .qty-btn {
-    flex: 1;
-    padding: 14px;
-    background: #0f172a;
-    border: 2px solid #334155;
-    border-radius: 10px;
-    color: #94a3b8;
-    font-weight: 700;
-    font-size: 16px;
-    cursor: pointer;
-    margin: 0;
-    transition: all 0.2s;
-  }
-  .qty-btn.active {
-    border-color: #ec4899;
-    background: linear-gradient(135deg, rgba(124,58,237,0.2) 0%, rgba(236,72,153,0.2) 100%);
-    color: white;
-  }
+.qty-selector { display: flex; gap: 8px; margin-top: 6px; }
+.qty-btn {
+flex: 1;
+padding: 14px;
+background: #0f172a;
+border: 2px solid #334155;
+border-radius: 10px;
+color: #94a3b8;
+font-weight: 700;
+font-size: 16px;
+cursor: pointer;
+margin: 0;
+transition: all 0.2s;
+}
+.qty-btn.active {
+border-color: #ec4899;
+background: linear-gradient(135deg, rgba(124,58,237,0.2) 0%, rgba(236,72,153,0.2) 100%);
+color: white;
+}
 
-  .qr-pair { display: grid; gap: 12px; margin-top: 16px; }
-  .qr-result {
-    text-align: center;
-    padding: 16px;
-    background: white;
-    border-radius: 12px;
-    position: relative;
-  }
-  .qr-result .badge {
-    position: absolute;
-    top: 8px; right: 8px;
-    background: #ec4899;
-    color: white;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 4px 8px;
-    border-radius: 6px;
-  }
-  .qr-result .qr-code { display: inline-block; }
-  .qr-result .qr-name { color: #1e293b; font-size: 14px; font-weight: 700; margin-top: 8px; }
-  .qr-result .qr-id { color: #64748b; font-family: 'Courier New', monospace; font-size: 11px; margin-top: 4px; }
-  .qr-actions { display: flex; gap: 8px; margin-top: 12px; }
-  .qr-actions button { flex: 1; }
+.qr-pair { display: grid; gap: 12px; margin-top: 16px; }
+.qr-result {
+text-align: center;
+padding: 16px;
+background: white;
+border-radius: 12px;
+position: relative;
+}
+.qr-result .badge {
+position: absolute;
+top: 8px; right: 8px;
+background: #ec4899;
+color: white;
+font-size: 11px;
+font-weight: 700;
+padding: 4px 8px;
+border-radius: 6px;
+}
+.qr-result .qr-code { display: inline-block; }
+.qr-result .qr-name { color: #1e293b; font-size: 14px; font-weight: 700; margin-top: 8px; }
+.qr-result .qr-id { color: #64748b; font-family: ‘Courier New’, monospace; font-size: 11px; margin-top: 4px; }
+.qr-actions { display: flex; gap: 8px; margin-top: 12px; }
+.qr-actions button { flex: 1; }
 
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-    margin-bottom: 16px;
-  }
-  .stat {
-    background: #1e293b;
-    padding: 10px 4px;
-    border-radius: 10px;
-    text-align: center;
-    border: 1px solid #334155;
-  }
-  .stat-value { font-size: 20px; font-weight: 700; color: #f1f5f9; }
-  .stat-label { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+.stats {
+display: grid;
+grid-template-columns: repeat(4, 1fr);
+gap: 6px;
+margin-bottom: 16px;
+}
+.stat {
+background: #1e293b;
+padding: 10px 4px;
+border-radius: 10px;
+text-align: center;
+border: 1px solid #334155;
+}
+.stat-value { font-size: 20px; font-weight: 700; color: #f1f5f9; }
+.stat-label { font-size: 10px; color: #94a3b8; margin-top: 2px; }
 
-  .ticket-list { max-height: 500px; overflow-y: auto; }
-  .order-group {
-    background: #0f172a;
-    border-radius: 10px;
-    margin-bottom: 8px;
-    overflow: hidden;
-    border: 1px solid #334155;
-  }
-  .order-header {
-    padding: 10px 12px;
-    background: #1e293b;
-    font-weight: 600;
-    font-size: 13px;
-    color: #f1f5f9;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .order-header .order-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .order-header .order-count {
-    font-size: 11px;
-    background: #334155;
-    color: #cbd5e1;
-    padding: 3px 8px;
-    border-radius: 6px;
-    margin-left: 8px;
-  }
-  .ticket-row {
-    padding: 10px 12px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 13px;
-    border-top: 1px solid #1e293b;
-    border-left: 3px solid #334155;
-  }
-  .ticket-row.used { border-left-color: #16a34a; opacity: 0.7; }
-  .ticket-row.valid { border-left-color: #ec4899; }
-  .ticket-info { flex: 1; min-width: 0; }
-  .ticket-meta { font-size: 11px; color: #94a3b8; font-family: 'Courier New', monospace; }
-  .ticket-status {
-    font-size: 10px; font-weight: 700; padding: 4px 8px;
-    border-radius: 6px; margin-left: 8px;
-  }
-  .ticket-status.valid { background: #ec4899; color: white; }
-  .ticket-status.used { background: #16a34a; color: white; }
+.ticket-list { max-height: 500px; overflow-y: auto; }
+.order-group {
+background: #0f172a;
+border-radius: 10px;
+margin-bottom: 8px;
+overflow: hidden;
+border: 1px solid #334155;
+}
+.order-header {
+padding: 10px 12px;
+background: #1e293b;
+font-weight: 600;
+font-size: 13px;
+color: #f1f5f9;
+display: flex;
+justify-content: space-between;
+align-items: center;
+}
+.order-header .order-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.order-header .order-count {
+font-size: 11px;
+background: #334155;
+color: #cbd5e1;
+padding: 3px 8px;
+border-radius: 6px;
+margin-left: 8px;
+}
+.ticket-row {
+padding: 10px 12px;
+display: flex;
+justify-content: space-between;
+align-items: center;
+font-size: 13px;
+border-top: 1px solid #1e293b;
+border-left: 3px solid #334155;
+}
+.ticket-row.used { border-left-color: #16a34a; opacity: 0.7; }
+.ticket-row.valid { border-left-color: #ec4899; }
+.ticket-info { flex: 1; min-width: 0; }
+.ticket-meta { font-size: 11px; color: #94a3b8; font-family: ‘Courier New’, monospace; }
+.ticket-status {
+font-size: 10px; font-weight: 700; padding: 4px 8px;
+border-radius: 6px; margin-left: 8px;
+}
+.ticket-status.valid { background: #ec4899; color: white; }
+.ticket-status.used { background: #16a34a; color: white; }
+.reactivate-btn {
+background: #475569;
+color: #e2e8f0;
+border: none;
+padding: 5px 9px;
+border-radius: 6px;
+font-size: 13px;
+font-weight: 600;
+cursor: pointer;
+margin-left: 6px;
+margin-top: 0;
+width: auto;
+line-height: 1;
+}
+.reactivate-btn:hover { background: #64748b; }
+.reactivate-btn:disabled { opacity: 0.5; cursor: wait; }
 
-  .toast {
-    position: fixed;
-    bottom: 80px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #1e293b;
-    color: white;
-    padding: 12px 20px;
-    border-radius: 10px;
-    border: 1px solid #475569;
-    font-size: 14px;
-    z-index: 1000;
-    animation: toastIn 0.3s;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    max-width: 90%;
-  }
-  @keyframes toastIn {
-    from { opacity: 0; transform: translate(-50%, 20px); }
-    to { opacity: 1; transform: translate(-50%, 0); }
-  }
+.toast {
+position: fixed;
+bottom: 80px;
+left: 50%;
+transform: translateX(-50%);
+background: #1e293b;
+color: white;
+padding: 12px 20px;
+border-radius: 10px;
+border: 1px solid #475569;
+font-size: 14px;
+z-index: 1000;
+animation: toastIn 0.3s;
+box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+max-width: 90%;
+}
+@keyframes toastIn {
+from { opacity: 0; transform: translate(-50%, 20px); }
+to { opacity: 1; transform: translate(-50%, 0); }
+}
 
-  .help-text { font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 8px; }
-  .help-text strong { color: #cbd5e1; }
-  .help-text code {
-    background: #0f172a;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 11px;
-  }
+.help-text { font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: 8px; }
+.help-text strong { color: #cbd5e1; }
+.help-text code {
+background: #0f172a;
+padding: 2px 6px;
+border-radius: 4px;
+font-size: 11px;
+}
 
-  details { margin-top: 12px; }
-  summary {
-    cursor: pointer;
-    font-size: 13px;
-    color: #94a3b8;
-    padding: 8px 0;
-  }
-  summary:hover { color: #e2e8f0; }
+details { margin-top: 12px; }
+summary {
+cursor: pointer;
+font-size: 13px;
+color: #94a3b8;
+padding: 8px 0;
+}
+summary:hover { color: #e2e8f0; }
 
-  .file-input-wrapper {
-    position: relative;
-    display: block;
-    background: #334155;
-    color: white;
-    text-align: center;
-    padding: 14px;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: 600;
-    margin-top: 12px;
-  }
-  .file-input-wrapper input { position: absolute; opacity: 0; left: 0; top: 0; width: 100%; height: 100%; cursor: pointer; }
+.file-input-wrapper {
+position: relative;
+display: block;
+background: #334155;
+color: white;
+text-align: center;
+padding: 14px;
+border-radius: 10px;
+cursor: pointer;
+font-weight: 600;
+margin-top: 12px;
+}
+.file-input-wrapper input { position: absolute; opacity: 0; left: 0; top: 0; width: 100%; height: 100%; cursor: pointer; }
 
-  .filter-bar { display: flex; gap: 6px; margin-bottom: 8px; }
-  .filter-bar button {
-    flex: 1;
-    padding: 8px;
-    margin: 0;
-    font-size: 12px;
-    background: #334155;
-  }
-  .filter-bar button.active { background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%); }
+.filter-bar { display: flex; gap: 6px; margin-bottom: 8px; }
+.filter-bar button {
+flex: 1;
+padding: 8px;
+margin: 0;
+font-size: 12px;
+background: #334155;
+}
+.filter-bar button.active { background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%); }
 
-  .template-box {
-    background: #0f172a;
-    border: 1px dashed #475569;
-    border-radius: 8px;
-    padding: 10px;
-    font-family: 'Courier New', monospace;
-    font-size: 11px;
-    margin-top: 8px;
-    color: #cbd5e1;
-    white-space: pre;
-    overflow-x: auto;
-  }
+.template-box {
+background: #0f172a;
+border: 1px dashed #475569;
+border-radius: 8px;
+padding: 10px;
+font-family: ‘Courier New’, monospace;
+font-size: 11px;
+margin-top: 8px;
+color: #cbd5e1;
+white-space: pre;
+overflow-x: auto;
+}
 
-  .splash {
-    position: fixed;
-    inset: 0;
-    background: #0f172a;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 16px;
-    z-index: 9999;
-  }
-  .splash .spinner {
-    width: 40px; height: 40px;
-    border: 4px solid #334155;
-    border-top-color: #ec4899;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .splash p { color: #94a3b8; font-size: 14px; }
+.splash {
+position: fixed;
+inset: 0;
+background: #0f172a;
+display: flex;
+align-items: center;
+justify-content: center;
+flex-direction: column;
+gap: 16px;
+z-index: 9999;
+}
+.splash .spinner {
+width: 40px; height: 40px;
+border: 4px solid #334155;
+border-top-color: #ec4899;
+border-radius: 50%;
+animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.splash p { color: #94a3b8; font-size: 14px; }
 
-  .app-link {
-    display: block;
-    text-align: center;
-    padding: 10px;
-    background: #334155;
-    color: #e2e8f0;
-    border-radius: 8px;
-    text-decoration: none;
-    font-size: 13px;
-    margin-top: 8px;
-  }
+.app-link {
+display: block;
+text-align: center;
+padding: 10px;
+background: #334155;
+color: #e2e8f0;
+border-radius: 8px;
+text-decoration: none;
+font-size: 13px;
+margin-top: 8px;
+}
 
-  #qr-print-area { display: none; }
+#qr-print-area { display: none; }
 </style>
+
 </head>
 <body>
 
@@ -365,38 +383,41 @@
     <label>Nome cliente / Riferimento PayPal</label>
     <input type="text" id="single-name" placeholder="es. Mario Rossi - PayPal #1234" autocomplete="off">
 
-    <label>Note (opzionale)</label>
-    <input type="text" id="single-notes" placeholder="es. evento 12/05" autocomplete="off">
+```
+<label>Note (opzionale)</label>
+<input type="text" id="single-notes" placeholder="es. evento 12/05" autocomplete="off">
 
-    <label>Numero di ticket</label>
-    <div class="qty-selector">
-      <button type="button" class="qty-btn" data-qty="1" onclick="setQty(1)">1 drink</button>
-      <button type="button" class="qty-btn active" data-qty="2" onclick="setQty(2)">2 drink</button>
-      <button type="button" class="qty-btn" data-qty="3" onclick="setQty(3)">3 drink</button>
-      <button type="button" class="qty-btn" data-qty="4" onclick="setQty(4)">4 drink</button>
-    </div>
+<label>Numero di ticket</label>
+<div class="qty-selector">
+  <button type="button" class="qty-btn" data-qty="1" onclick="setQty(1)">1 drink</button>
+  <button type="button" class="qty-btn active" data-qty="2" onclick="setQty(2)">2 drink</button>
+  <button type="button" class="qty-btn" data-qty="3" onclick="setQty(3)">3 drink</button>
+  <button type="button" class="qty-btn" data-qty="4" onclick="setQty(4)">4 drink</button>
+</div>
 
-    <button onclick="generateSingle()">🎟️ Genera Ticket QR</button>
+<button onclick="generateSingle()">🎟️ Genera Ticket QR</button>
 
-    <div id="single-result" style="display:none;">
-      <div class="qr-pair" id="single-qr-pair"></div>
-      <div class="qr-actions">
-        <button class="secondary" onclick="downloadOrderImage()">📥 Scarica</button>
-        <button class="secondary" onclick="shareOrderImage()">📤 Condividi</button>
-      </div>
-      <button class="secondary" onclick="downloadOrderPDF()" style="margin-top:6px;">📄 PDF stampabile</button>
-    </div>
+<div id="single-result" style="display:none;">
+  <div class="qr-pair" id="single-qr-pair"></div>
+  <div class="qr-actions">
+    <button class="secondary" onclick="downloadOrderImage()">📥 Scarica</button>
+    <button class="secondary" onclick="shareOrderImage()">📤 Condividi</button>
+  </div>
+  <button class="secondary" onclick="downloadOrderPDF()" style="margin-top:6px;">📄 PDF stampabile</button>
+</div>
 
-    <details>
-      <summary>ℹ️ Come funziona?</summary>
-      <div class="help-text">
-        <strong>1.</strong> Ricevi pagamento PayPal sulla mail.<br>
-        <strong>2.</strong> Inserisci nome del cliente e scegli n° drink.<br>
-        <strong>3.</strong> Genera i QR code accoppiati allo stesso ordine.<br>
-        <strong>4.</strong> Scarica/condividi l'immagine via WhatsApp o email.<br>
-        <strong>5.</strong> I QR vengono salvati nel cloud — al bar usano l'app Burner per scansionarli.
-      </div>
-    </details>
+<details>
+  <summary>ℹ️ Come funziona?</summary>
+  <div class="help-text">
+    <strong>1.</strong> Ricevi pagamento PayPal sulla mail.<br>
+    <strong>2.</strong> Inserisci nome del cliente e scegli n° drink.<br>
+    <strong>3.</strong> Genera i QR code accoppiati allo stesso ordine.<br>
+    <strong>4.</strong> Scarica/condividi l'immagine via WhatsApp o email.<br>
+    <strong>5.</strong> I QR vengono salvati nel cloud — al bar usano l'app Burner per scansionarli.
+  </div>
+</details>
+```
+
   </div>
 </div>
 
@@ -405,35 +426,41 @@
     <h2>Carica lista ordini</h2>
     <p class="help-text">Ogni riga del file = <strong>1 ordine</strong>. Per default ogni ordine genera <strong>2 ticket</strong>. Puoi sovrascrivere il numero per riga aggiungendo una colonna <code>Drink</code>.</p>
 
-    <div class="template-box">Nome           | Email             | Drink | Note
-Mario Rossi   | mario@mail.com    | 2     | 
+```
+<div class="template-box">Nome           | Email             | Drink | Note
+```
+
+Mario Rossi   | mario@mail.com    | 2     |
 Lucia Bianchi | lucia@mail.com    | 2     | spritz
 Andrea Verdi  | andrea@mail.com   | 4     | tavolo VIP</div>
 
-    <button class="secondary" onclick="downloadTemplate()" style="margin-top:8px;">📥 Scarica template Excel</button>
+```
+<button class="secondary" onclick="downloadTemplate()" style="margin-top:8px;">📥 Scarica template Excel</button>
 
-    <label style="margin-top:16px;">Carica file Excel/CSV</label>
-    <label class="file-input-wrapper">
-      📁 Seleziona file (.xlsx, .csv)
-      <input type="file" id="excel-file" accept=".xlsx,.xls,.csv" onchange="loadExcel(event)">
-    </label>
+<label style="margin-top:16px;">Carica file Excel/CSV</label>
+<label class="file-input-wrapper">
+  📁 Seleziona file (.xlsx, .csv)
+  <input type="file" id="excel-file" accept=".xlsx,.xls,.csv" onchange="loadExcel(event)">
+</label>
 
-    <label>Oppure incolla nomi (uno per riga)</label>
-    <textarea id="bulk-names" rows="5" placeholder="Mario Rossi&#10;Lucia Bianchi&#10;Andrea Verdi"></textarea>
+<label>Oppure incolla nomi (uno per riga)</label>
+<textarea id="bulk-names" rows="5" placeholder="Mario Rossi&#10;Lucia Bianchi&#10;Andrea Verdi"></textarea>
 
-    <label>Drink per persona (default)</label>
-    <select id="default-qty">
-      <option value="1">1 drink</option>
-      <option value="2" selected>2 drink</option>
-      <option value="3">3 drink</option>
-      <option value="4">4 drink</option>
-    </select>
+<label>Drink per persona (default)</label>
+<select id="default-qty">
+  <option value="1">1 drink</option>
+  <option value="2" selected>2 drink</option>
+  <option value="3">3 drink</option>
+  <option value="4">4 drink</option>
+</select>
 
-    <button onclick="generateBulk()">🎟️ Genera tickets in batch</button>
-    <button class="secondary" onclick="exportBulkPDF()" id="export-pdf-btn" style="display:none;">📄 PDF stampabile</button>
-    <button class="secondary" onclick="exportBulkCSV()" id="export-csv-btn" style="display:none;">📊 CSV con ID ticket</button>
+<button onclick="generateBulk()">🎟️ Genera tickets in batch</button>
+<button class="secondary" onclick="exportBulkPDF()" id="export-pdf-btn" style="display:none;">📄 PDF stampabile</button>
+<button class="secondary" onclick="exportBulkCSV()" id="export-csv-btn" style="display:none;">📊 CSV con ID ticket</button>
 
-    <div id="bulk-status" style="margin-top:12px;"></div>
+<div id="bulk-status" style="margin-top:12px;"></div>
+```
+
   </div>
 </div>
 
@@ -464,30 +491,34 @@ Andrea Verdi  | andrea@mail.com   | 4     | tavolo VIP</div>
       <button onclick="filterTickets('used', this)">Usati</button>
     </div>
 
-    <input type="text" id="search-tickets" placeholder="🔍 Cerca per nome o ID..." oninput="renderTicketList()">
+```
+<input type="text" id="search-tickets" placeholder="🔍 Cerca per nome o ID..." oninput="renderTicketList()">
 
-    <div class="ticket-list" id="ticket-list" style="margin-top:12px;"></div>
+<div class="ticket-list" id="ticket-list" style="margin-top:12px;"></div>
 
-    <a class="app-link" href="../burner/" target="_blank">🔥 Apri app Burner →</a>
+<a class="app-link" href="../burner/" target="_blank">🔥 Apri app Burner →</a>
 
-    <details>
-      <summary>⚙️ Strumenti avanzati</summary>
-      <button class="secondary" onclick="exportAllCSV()">📥 Esporta tutto (CSV)</button>
-      <button class="danger" onclick="resetUsedStatus()">↺ Riattiva tutti i ticket usati</button>
-      <button class="danger" onclick="deleteAllData()">🗑 Cancella tutto</button>
-    </details>
+<details>
+  <summary>⚙️ Strumenti avanzati</summary>
+  <button class="secondary" onclick="exportAllCSV()">📥 Esporta tutto (CSV)</button>
+  <button class="danger" onclick="resetUsedStatus()">↺ Riattiva tutti i ticket usati</button>
+  <button class="danger" onclick="deleteAllData()">🗑 Cancella tutto</button>
+</details>
 
-    <details>
-      <summary>📱 Dispositivo</summary>
-      <div class="help-text">Nome di questo dispositivo (mostrato nei log):</div>
-      <input type="text" id="device-name-input" placeholder="es. PC Cassa" onchange="setDeviceName(this.value)">
-    </details>
+<details>
+  <summary>📱 Dispositivo</summary>
+  <div class="help-text">Nome di questo dispositivo (mostrato nei log):</div>
+  <input type="text" id="device-name-input" placeholder="es. PC Cassa" onchange="setDeviceName(this.value)">
+</details>
+```
+
   </div>
 </div>
 
 <div id="qr-print-area"></div>
 
 <!-- Firebase init -->
+
 <script type="module">
 try {
   const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js");
@@ -1041,7 +1072,10 @@ function renderTicketList() {
                 ${t.usedAt ? ' • Usato: ' + fmtDate(t.usedAt) + (t.usedBy && t.usedBy !== 'unknown' ? ' (' + escapeHtml(t.usedBy) + ')' : '') : ' • ' + fmtDate(t.createdAt)}
               </div>
             </div>
-            <span class="ticket-status ${t.usedAt ? 'used' : 'valid'}">${t.usedAt ? 'USATO' : 'VALIDO'}</span>
+            <div style="display:flex;align-items:center;">
+              <span class="ticket-status ${t.usedAt ? 'used' : 'valid'}">${t.usedAt ? 'USATO' : 'VALIDO'}</span>
+              ${t.usedAt ? `<button class="reactivate-btn" onclick="reactivateOne('${t.id}', this)" title="Riattiva questo ticket">↺</button>` : ''}
+            </div>
           </div>
         `).join('')}
       </div>
@@ -1090,6 +1124,26 @@ async function resetUsedStatus() {
   renderTicketList();
 }
 
+async function reactivateOne(id, btn) {
+  const ticket = STATE.tickets[id];
+  if (!ticket) { toast('Ticket non trovato'); return; }
+  if (!ticket.usedAt) { toast('Ticket già valido'); return; }
+  if (!confirm(`Riattivare il ticket di ${ticket.name}?\nID: ${id}`)) return;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  try {
+    ticket.usedAt = null;
+    ticket.usedBy = null;
+    await saveTicket(ticket);
+    toast(`↺ Ticket di ${ticket.name} riattivato`);
+    updateStats();
+    renderTicketList();
+  } catch(e) {
+    console.error(e);
+    toast('❌ Errore: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '↺'; }
+  }
+}
+
 async function deleteAllData() {
   if (!confirm('CANCELLARE TUTTO dal cloud? Azione irreversibile.')) return;
   if (!confirm('Davvero sicuro? Tutti i ticket verranno persi su tutti i dispositivi.')) return;
@@ -1117,6 +1171,7 @@ window.filterTickets = filterTickets;
 window.renderTicketList = renderTicketList;
 window.exportAllCSV = exportAllCSV;
 window.resetUsedStatus = resetUsedStatus;
+window.reactivateOne = reactivateOne;
 window.deleteAllData = deleteAllData;
 window.setDeviceName = setDeviceName;
 
