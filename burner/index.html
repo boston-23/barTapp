@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🔥 Drink Ticket — Burner</title>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding-bottom: 20px;
+  }
+  header {
+    background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%);
+    padding: 14px 16px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 { font-size: 18px; font-weight: 700; }
+  header .subtitle { font-size: 11px; opacity: 0.9; margin-top: 2px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+  .sync-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #fbbf24;
+    animation: pulse 2s infinite;
+  }
+  .sync-indicator.online { background: #10b981; }
+  .sync-indicator.offline { background: #ef4444; animation: none; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  }
+
+  .tabs {
+    display: flex;
+    background: #1e293b;
+    position: sticky;
+    top: 56px;
+    z-index: 90;
+    border-bottom: 1px solid #334155;
+  }
+  .tab {
+    flex: 1;
+    padding: 12px 8px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #94a3b8;
+    border-bottom: 3px solid transparent;
+  }
+  .tab.active {
+    color: #f9fafb;
+    border-bottom-color: #ea580c;
+    background: #0f172a;
+  }
+  .tab-icon { font-size: 18px; display: block; margin-bottom: 2px; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .card {
+    background: #1e293b;
+    border-radius: 12px;
+    padding: 12px;
+    margin: 10px;
+    border: 1px solid #334155;
+  }
+
+  h2 { font-size: 15px; margin-bottom: 10px; color: #f1f5f9; }
+
+  button {
+    background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%);
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 8px;
+  }
+  button:active { transform: scale(0.98); }
+  button.secondary { background: #334155; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  input {
+    width: 100%;
+    padding: 12px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: #e2e8f0;
+    font-size: 15px;
+    font-family: inherit;
+  }
+  input:focus { outline: none; border-color: #ea580c; }
+  label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 6px; margin-top: 10px; }
+
+  /* SCAN PANEL — compact single-screen layout */
+  #scanner-container {
+    position: relative;
+    width: 100%;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    aspect-ratio: 1 / 1;
+    transition: opacity 0.2s;
+  }
+  #scanner-container.frozen { opacity: 0.55; }
+  #scanner-container.frozen .scanner-overlay { border-color: #fbbf24; }
+  #scanner-video {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+  }
+  #scanner-canvas { display: none; }
+  .scanner-overlay {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 70%; aspect-ratio: 1;
+    border: 3px solid #ea580c;
+    border-radius: 12px;
+    box-shadow: 0 0 0 2000px rgba(0,0,0,0.5);
+    pointer-events: none;
+    transition: border-color 0.2s;
+  }
+  .scan-result {
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.35;
+    animation: flash 0.4s;
+  }
+  .scan-result strong { font-weight: 700; font-size: 14px; }
+  .scan-result.success { background: #14532d; border: 1px solid #16a34a; color: #d1fae5; }
+  .scan-result.warning { background: #7c2d12; border: 1px solid #ea580c; color: #fed7aa; }
+  .scan-result.error { background: #7f1d1d; border: 1px solid #dc2626; color: #fecaca; }
+  .scan-result code {
+    background: rgba(0,0,0,0.3);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 11px;
+  }
+  .scan-actions { display: flex; gap: 8px; margin-top: 8px; }
+  .scan-actions button {
+    margin: 0;
+    padding: 13px;
+    font-size: 15px;
+  }
+  .burn-btn { flex: 2; background: #16a34a !important; }
+  .cancel-btn { flex: 1; background: #475569 !important; }
+  .scanner-status {
+    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    background: #334155;
+    color: #cbd5e1;
+  }
+  @keyframes flash {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+    100% { transform: scale(1); }
+  }
+
+  #panel-scan .card { padding: 12px; margin-bottom: 0; }
+  #panel-scan button { padding: 12px; margin-top: 8px; }
+  #panel-scan details { margin-top: 8px; }
+  #panel-scan details summary { padding: 4px 0; font-size: 12px; color: #94a3b8; cursor: pointer; }
+
+  .toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: 1px solid #475569;
+    font-size: 14px;
+    z-index: 1000;
+    animation: toastIn 0.3s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    max-width: 90%;
+  }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translate(-50%, 20px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .stat {
+    background: #1e293b;
+    padding: 10px 4px;
+    border-radius: 10px;
+    text-align: center;
+    border: 1px solid #334155;
+  }
+  .stat-value { font-size: 22px; font-weight: 700; color: #f1f5f9; }
+  .stat-label { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+
+  .ticket-list { max-height: 400px; overflow-y: auto; }
+  .order-group {
+    background: #0f172a;
+    border-radius: 10px;
+    margin-bottom: 6px;
+    overflow: hidden;
+    border: 1px solid #334155;
+  }
+  .order-header {
+    padding: 8px 10px;
+    background: #1e293b;
+    font-weight: 600;
+    font-size: 13px;
+    color: #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .order-header .order-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .order-header .order-count {
+    font-size: 10px;
+    background: #334155;
+    color: #cbd5e1;
+    padding: 2px 6px;
+    border-radius: 5px;
+    margin-left: 6px;
+  }
+  .ticket-row {
+    padding: 8px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    border-top: 1px solid #1e293b;
+    border-left: 3px solid #334155;
+  }
+  .ticket-row.used { border-left-color: #16a34a; opacity: 0.6; }
+  .ticket-row.valid { border-left-color: #ea580c; }
+  .ticket-meta { font-size: 10px; color: #94a3b8; font-family: 'Courier New', monospace; }
+  .ticket-status {
+    font-size: 10px; font-weight: 700; padding: 3px 6px;
+    border-radius: 5px;
+  }
+  .ticket-status.valid { background: #ea580c; color: white; }
+  .ticket-status.used { background: #16a34a; color: white; }
+
+  .filter-bar { display: flex; gap: 6px; margin-bottom: 8px; }
+  .filter-bar button {
+    flex: 1; padding: 8px; margin: 0;
+    font-size: 12px; background: #334155;
+  }
+  .filter-bar button.active { background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%); }
+
+  .splash {
+    position: fixed;
+    inset: 0;
+    background: #0f172a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    z-index: 9999;
+  }
+  .splash .spinner {
+    width: 40px; height: 40px;
+    border: 4px solid #334155;
+    border-top-color: #ea580c;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .splash p { color: #94a3b8; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div id="splash" class="splash">
+  <div class="spinner"></div>
+  <p>Connessione al cloud...</p>
+</div>
+
+<header>
+  <h1>🔥 Burner</h1>
+  <div class="subtitle">
+    <span class="sync-indicator" id="sync-dot"></span>
+    <span id="sync-status">Connessione...</span>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="scan" onclick="switchTab('scan', this)">
+    <span class="tab-icon">📷</span>Scanner
+  </div>
+  <div class="tab" data-tab="list" onclick="switchTab('list', this)">
+    <span class="tab-icon">📊</span>Tickets
+  </div>
+</div>
+
+<!-- SCAN -->
+<div id="panel-scan" class="panel active">
+  <div class="card">
+    <div id="scanner-container" style="display:none;">
+      <video id="scanner-video" playsinline muted></video>
+      <canvas id="scanner-canvas"></canvas>
+      <div class="scanner-overlay"></div>
+    </div>
+
+    <div id="scan-feedback">
+      <div id="scanner-status" class="scanner-status">📷 Premi avvia per iniziare</div>
+    </div>
+
+    <button id="start-scan-btn" onclick="startScanner()">📷 Avvia scanner</button>
+    <button id="stop-scan-btn" class="secondary" onclick="stopScanner()" style="display:none;">⏸ Ferma scanner</button>
+
+    <details>
+      <summary>🔍 Inserimento manuale ID</summary>
+      <input type="text" id="manual-code" placeholder="DT-XXXXXXXX" autocomplete="off" style="text-transform:uppercase;">
+      <button class="secondary" onclick="manualValidate()">Valida</button>
+    </details>
+  </div>
+</div>
+
+<!-- LIST (read-only) -->
+<div id="panel-list" class="panel">
+  <div class="card">
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value" id="stat-total">0</div>
+        <div class="stat-label">TICKETS</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-valid" style="color:#ea580c;">0</div>
+        <div class="stat-label">DA BRUCIARE</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-used" style="color:#16a34a;">0</div>
+        <div class="stat-label">BRUCIATI</div>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <button class="active" onclick="filterTickets('all', this)">Tutti</button>
+      <button onclick="filterTickets('valid', this)">Da bruciare</button>
+      <button onclick="filterTickets('used', this)">Bruciati</button>
+    </div>
+
+    <input type="text" id="search-tickets" placeholder="🔍 Cerca per nome o ID..." oninput="renderTicketList()">
+
+    <div class="ticket-list" id="ticket-list" style="margin-top:10px;"></div>
+
+    <details>
+      <summary>📱 Nome dispositivo</summary>
+      <label>Nome che apparirà nei log:</label>
+      <input type="text" id="device-name-input" placeholder="es. iPhone Bar 1" onchange="setDeviceName(this.value)">
+    </details>
+  </div>
+</div>
+
+<!-- Firebase init -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getFirestore, collection, doc, onSnapshot, runTransaction,
+  enableIndexedDbPersistence
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBgpHpZyuYAJmLJYTnwlWSNlz0R6JRQ1Z0",
+  authDomain: "drink-tickets-4459c.firebaseapp.com",
+  projectId: "drink-tickets-4459c",
+  storageBucket: "drink-tickets-4459c.firebasestorage.app",
+  messagingSenderId: "653465832638",
+  appId: "1:653465832638:web:fb2a6362763941a9a662ef"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+
+try { await enableIndexedDbPersistence(db); } catch (e) { console.warn('Persistence:', e.code); }
+
+const ticketsCol = collection(db, 'tickets');
+
+window.firebase = { db, collection, doc, onSnapshot, runTransaction, ticketsCol };
+window.firebaseReady = true;
+window.dispatchEvent(new Event('firebase-ready'));
+</script>
+
+<script>
+const STATE = {
+  tickets: {},
+  currentFilter: 'all',
+  scanning: false,
+  frozen: false,
+  videoStream: null,
+  loaded: false,
+  deviceName: localStorage.getItem('deviceName') || ''
+};
+
+function toast(msg, duration = 2500) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), duration);
+}
+function fmtDate(ts) {
+  if (!ts) return '-';
+  const d = new Date(ts);
+  return d.toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function setSyncStatus(state, msg) {
+  document.getElementById('sync-dot').className = 'sync-indicator ' + state;
+  document.getElementById('sync-status').textContent = msg;
+}
+function setDeviceName(name) {
+  STATE.deviceName = name.trim();
+  localStorage.setItem('deviceName', STATE.deviceName);
+  toast('✅ Nome salvato');
+}
+
+function startFirebaseSync() {
+  const fb = window.firebase;
+  if (!fb) { setSyncStatus('offline', '❌ Firebase non disponibile'); return; }
+  setSyncStatus('', '🔄 Caricamento...');
+  fb.onSnapshot(fb.ticketsCol, (snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      const data = change.doc.data();
+      if (change.type === 'removed') delete STATE.tickets[change.doc.id];
+      else STATE.tickets[change.doc.id] = data;
+    });
+    if (!STATE.loaded) {
+      STATE.loaded = true;
+      document.getElementById('splash').style.display = 'none';
+    }
+    setSyncStatus('online', `🌐 ${Object.keys(STATE.tickets).length} ticket sincronizzati`);
+    updateStats();
+    if (document.getElementById('panel-list').classList.contains('active')) renderTicketList();
+  }, (error) => {
+    console.error('Sync error:', error);
+    setSyncStatus('offline', '❌ Errore: ' + error.code);
+    if (!STATE.loaded) {
+      STATE.loaded = true;
+      document.getElementById('splash').style.display = 'none';
+      toast('❌ Connessione fallita');
+    }
+  });
+}
+
+async function atomicBurnTicket(id, deviceName) {
+  const fb = window.firebase;
+  if (!fb) throw new Error('Firebase not ready');
+  const ref = fb.doc(fb.db, 'tickets', id);
+  return await fb.runTransaction(fb.db, async (transaction) => {
+    const docSnap = await transaction.get(ref);
+    if (!docSnap.exists()) return { success: false, reason: 'not_found' };
+    const ticket = docSnap.data();
+    if (ticket.usedAt) return { success: false, reason: 'already_used', ticket };
+    const now = Date.now();
+    transaction.update(ref, { usedAt: now, usedBy: deviceName || 'unknown' });
+    return { success: true, ticket: { ...ticket, usedAt: now, usedBy: deviceName } };
+  });
+}
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-' + tab).classList.add('active');
+  if (tab === 'list') renderTicketList();
+  if (tab !== 'scan') stopScanner();
+}
+
+// ============== SCANNER ==============
+async function startScanner() {
+  const video = document.getElementById('scanner-video');
+  try {
+    STATE.videoStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' }
+    });
+    video.srcObject = STATE.videoStream;
+    await video.play();
+    STATE.scanning = true;
+    STATE.frozen = false;
+    document.getElementById('scanner-container').style.display = 'block';
+    document.getElementById('scanner-container').classList.remove('frozen');
+    document.getElementById('start-scan-btn').style.display = 'none';
+    document.getElementById('stop-scan-btn').style.display = 'block';
+    showIdleStatus();
+    requestAnimationFrame(scanLoop);
+  } catch(e) {
+    showFeedback('error', '❌ Fotocamera non accessibile. Verifica i permessi.');
+    console.error(e);
+  }
+}
+
+function stopScanner() {
+  STATE.scanning = false;
+  STATE.frozen = false;
+  if (STATE.videoStream) {
+    STATE.videoStream.getTracks().forEach(t => t.stop());
+    STATE.videoStream = null;
+  }
+  document.getElementById('scanner-container').style.display = 'none';
+  document.getElementById('scanner-container').classList.remove('frozen');
+  document.getElementById('start-scan-btn').style.display = 'block';
+  document.getElementById('stop-scan-btn').style.display = 'none';
+  showIdleStatus('📷 Premi avvia per iniziare');
+}
+
+function freezeScanner() {
+  STATE.frozen = true;
+  document.getElementById('scanner-container').classList.add('frozen');
+}
+
+function resumeScanner() {
+  STATE.frozen = false;
+  document.getElementById('scanner-container').classList.remove('frozen');
+  showIdleStatus();
+}
+
+function showIdleStatus(msg) {
+  document.getElementById('scan-feedback').innerHTML = `
+    <div class="scanner-status">${msg || '🔍 Inquadra un QR code'}</div>`;
+}
+
+function showFeedback(type, html) {
+  document.getElementById('scan-feedback').innerHTML = `
+    <div class="scan-result ${type}">${html}</div>`;
+}
+
+function scanLoop() {
+  if (!STATE.scanning) return;
+  if (STATE.frozen) {
+    requestAnimationFrame(scanLoop);
+    return;
+  }
+  const video = document.getElementById('scanner-video');
+  const canvas = document.getElementById('scanner-canvas');
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    if (code && code.data) {
+      freezeScanner();
+      validateTicket(code.data);
+    }
+  }
+  requestAnimationFrame(scanLoop);
+}
+
+function getOrderSiblings(ticket) {
+  if (!ticket.orderId) return [];
+  return Object.values(STATE.tickets).filter(t => t.orderId === ticket.orderId);
+}
+
+async function validateTicket(rawCode) {
+  const code = rawCode.trim().toUpperCase();
+  const ticket = STATE.tickets[code];
+
+  try { if (navigator.vibrate) navigator.vibrate(80); } catch(e) {}
+
+  if (!ticket) {
+    showFeedback('error', `
+      <strong>❌ QR non riconosciuto</strong><br>
+      <code>${escapeHtml(code)}</code>
+      <div class="scan-actions">
+        <button class="cancel-btn" onclick="cancelScan()">↻ Riprendi scan</button>
+      </div>
+    `);
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 100]);
+    return;
+  }
+
+  const siblings = getOrderSiblings(ticket);
+  const siblingsUsed = siblings.filter(s => s.usedAt).length;
+  const siblingsTotal = siblings.length || 1;
+  const orderProgress = siblingsTotal > 1
+    ? `<small>Ordine: ${siblingsUsed}/${siblingsTotal} usati</small><br>`
+    : '';
+
+  if (ticket.usedAt) {
+    const usedByInfo = ticket.usedBy && ticket.usedBy !== 'unknown'
+      ? ` • ${escapeHtml(ticket.usedBy)}` : '';
+    showFeedback('warning', `
+      <strong>⚠️ GIÀ USATO</strong><br>
+      <strong>${escapeHtml(ticket.name)}</strong>${ticket.orderTotal > 1 ? ` (${ticket.orderIndex}/${ticket.orderTotal})` : ''}<br>
+      ${orderProgress}
+      <small>Usato: ${fmtDate(ticket.usedAt)}${usedByInfo}</small>
+      <div class="scan-actions">
+        <button class="cancel-btn" onclick="cancelScan()">↻ Riprendi scan</button>
+      </div>
+    `);
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    return;
+  }
+
+  const indexBadge = ticket.orderTotal > 1
+    ? ` <span style="background:#ea580c;padding:1px 6px;border-radius:4px;font-size:11px;color:white;">${ticket.orderIndex}/${ticket.orderTotal}</span>`
+    : '';
+  showFeedback('success', `
+    <strong>✅ TICKET VALIDO</strong><br>
+    <strong>${escapeHtml(ticket.name)}</strong>${indexBadge}<br>
+    ${orderProgress}
+    ${ticket.notes ? `<small><em>${escapeHtml(ticket.notes)}</em></small><br>` : ''}
+    <small><code>${ticket.id}</code></small>
+    <div class="scan-actions">
+      <button class="burn-btn" onclick="confirmBurn('${ticket.id}')">🔥 BRUCIA</button>
+      <button class="cancel-btn" onclick="cancelScan()">Annulla</button>
+    </div>
+  `);
+  if (navigator.vibrate) navigator.vibrate(200);
+}
+
+async function confirmBurn(id) {
+  document.querySelectorAll('.scan-actions button').forEach(b => b.disabled = true);
+  try {
+    const result = await atomicBurnTicket(id, STATE.deviceName || 'unknown');
+
+    if (!result.success) {
+      if (result.reason === 'already_used') {
+        const t = result.ticket;
+        const usedByInfo = t.usedBy && t.usedBy !== 'unknown' ? ` • ${escapeHtml(t.usedBy)}` : '';
+        showFeedback('warning', `
+          <strong>⚠️ Già bruciato altrove!</strong><br>
+          ${escapeHtml(t.name)}<br>
+          <small>${fmtDate(t.usedAt)}${usedByInfo}</small>
+          <div class="scan-actions">
+            <button class="cancel-btn" onclick="cancelScan()">↻ Riprendi scan</button>
+          </div>
+        `);
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
+      } else {
+        showFeedback('error', `
+          <strong>❌ Ticket non trovato</strong>
+          <div class="scan-actions">
+            <button class="cancel-btn" onclick="cancelScan()">↻ Riprendi scan</button>
+          </div>
+        `);
+      }
+      return;
+    }
+
+    const ticket = result.ticket;
+    const siblings = getOrderSiblings(ticket);
+    const remaining = siblings.filter(s => !s.usedAt).length;
+    const remainingMsg = ticket.orderTotal > 1
+      ? `<small>Restano ${remaining}/${ticket.orderTotal} drink</small>`
+      : '<small>Drink consegnato</small>';
+
+    showFeedback('success', `
+      <strong>🔥 BRUCIATO!</strong><br>
+      <strong>${escapeHtml(ticket.name)}</strong>${ticket.orderTotal > 1 ? ` (${ticket.orderIndex}/${ticket.orderTotal})` : ''}<br>
+      ${remainingMsg}
+    `);
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 300]);
+    updateStats();
+
+    setTimeout(() => {
+      if (STATE.scanning) resumeScanner();
+    }, 1800);
+  } catch(e) {
+    console.error(e);
+    showFeedback('error', `
+      <strong>❌ Errore: ${escapeHtml(e.message)}</strong>
+      <div class="scan-actions">
+        <button class="cancel-btn" onclick="cancelScan()">↻ Riprendi scan</button>
+      </div>
+    `);
+  }
+}
+
+function cancelScan() {
+  if (STATE.scanning) resumeScanner();
+  else showIdleStatus('📷 Premi avvia per iniziare');
+}
+
+function manualValidate() {
+  const code = document.getElementById('manual-code').value.trim().toUpperCase();
+  if (!code) return;
+  if (STATE.scanning) freezeScanner();
+  validateTicket(code);
+  document.getElementById('manual-code').value = '';
+}
+
+// ============== TICKET LIST (read-only) ==============
+function updateStats() {
+  const tickets = Object.values(STATE.tickets);
+  const used = tickets.filter(t => t.usedAt).length;
+  document.getElementById('stat-total').textContent = tickets.length;
+  document.getElementById('stat-valid').textContent = tickets.length - used;
+  document.getElementById('stat-used').textContent = used;
+}
+
+function filterTickets(filter, btn) {
+  STATE.currentFilter = filter;
+  document.querySelectorAll('.filter-bar button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTicketList();
+}
+
+function renderTicketList() {
+  const list = document.getElementById('ticket-list');
+  const search = document.getElementById('search-tickets').value.toLowerCase();
+  let tickets = Object.values(STATE.tickets);
+  if (STATE.currentFilter === 'valid') tickets = tickets.filter(t => !t.usedAt);
+  if (STATE.currentFilter === 'used') tickets = tickets.filter(t => t.usedAt);
+  if (search) {
+    tickets = tickets.filter(t =>
+      t.id.toLowerCase().includes(search) ||
+      (t.name || '').toLowerCase().includes(search) ||
+      (t.orderId || '').toLowerCase().includes(search)
+    );
+  }
+  if (tickets.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:#64748b;padding:30px;">Nessun ticket</div>';
+    return;
+  }
+  const groups = {};
+  tickets.forEach(t => {
+    const key = t.orderId || 'NO-ORDER-' + t.id;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(t);
+  });
+  const sortedKeys = Object.keys(groups).sort((a, b) => {
+    // Most recently active orders first (latest usedAt or createdAt)
+    const aMax = Math.max(...groups[a].map(t => t.usedAt || t.createdAt));
+    const bMax = Math.max(...groups[b].map(t => t.usedAt || t.createdAt));
+    return bMax - aMax;
+  });
+  list.innerHTML = sortedKeys.map(key => {
+    const group = groups[key].sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+    const first = group[0];
+    const usedCount = group.filter(t => t.usedAt).length;
+    const totalCount = first.orderTotal || group.length;
+    return `
+      <div class="order-group">
+        <div class="order-header">
+          <div class="order-name">${escapeHtml(first.name)}</div>
+          <span class="order-count">${usedCount}/${totalCount}</span>
+        </div>
+        ${group.map(t => `
+          <div class="ticket-row ${t.usedAt ? 'used' : 'valid'}">
+            <div>
+              <div class="ticket-meta">
+                ${t.id}${t.orderTotal > 1 ? ` • ${t.orderIndex}/${t.orderTotal}` : ''}
+                ${t.usedAt ? ' • ' + fmtDate(t.usedAt) + (t.usedBy && t.usedBy !== 'unknown' ? ' (' + escapeHtml(t.usedBy) + ')' : '') : ''}
+              </div>
+            </div>
+            <span class="ticket-status ${t.usedAt ? 'used' : 'valid'}">${t.usedAt ? 'USATO' : 'OK'}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
+window.switchTab = switchTab;
+window.startScanner = startScanner;
+window.stopScanner = stopScanner;
+window.confirmBurn = confirmBurn;
+window.cancelScan = cancelScan;
+window.manualValidate = manualValidate;
+window.filterTickets = filterTickets;
+window.renderTicketList = renderTicketList;
+window.setDeviceName = setDeviceName;
+
+document.getElementById('device-name-input').value = STATE.deviceName;
+
+if (window.firebaseReady) startFirebaseSync();
+else {
+  window.addEventListener('firebase-ready', startFirebaseSync);
+  setTimeout(() => {
+    if (!STATE.loaded) {
+      document.getElementById('splash').style.display = 'none';
+      setSyncStatus('offline', '❌ Timeout');
+      toast('❌ Firebase non risponde');
+    }
+  }, 15000);
+}
+</script>
+
+</body>
+</html>
