@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BarTapp — Prezzi</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .container { max-width: 800px; margin: 0 auto; }
+
+  header {
+    text-align: center;
+    padding: 30px 0 40px;
+  }
+  h1 {
+    font-size: 32px;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  header p { color: #94a3b8; font-size: 16px; }
+
+  .free-tier {
+    background: linear-gradient(135deg, #14532d 0%, #166534 100%);
+    border: 1px solid #16a34a;
+    border-radius: 14px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .free-tier h2 { font-size: 20px; margin-bottom: 6px; }
+  .free-tier p { color: #d1fae5; font-size: 14px; }
+
+  .plans {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .plan {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 14px;
+    padding: 24px 20px;
+    text-align: center;
+    transition: transform 0.15s;
+    position: relative;
+  }
+  .plan:hover { transform: translateY(-2px); }
+  .plan.featured {
+    border-color: #ec4899;
+    box-shadow: 0 0 0 2px rgba(236, 72, 153, 0.3);
+  }
+  .plan.featured::before {
+    content: "⭐ Più scelto";
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ec4899;
+    color: white;
+    padding: 3px 12px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .plan-name {
+    font-size: 14px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .plan-price {
+    font-size: 42px;
+    font-weight: 800;
+    color: #f1f5f9;
+    margin-bottom: 4px;
+  }
+  .plan-price .currency { font-size: 24px; vertical-align: top; }
+  .plan-period { font-size: 13px; color: #94a3b8; margin-bottom: 16px; }
+  .plan-features {
+    text-align: left;
+    list-style: none;
+    margin-bottom: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #334155;
+  }
+  .plan-features li {
+    font-size: 13px;
+    color: #cbd5e1;
+    padding: 6px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .plan-features li::before {
+    content: "✓";
+    color: #16a34a;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .plan-cta {
+    display: block;
+    background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+    color: white;
+    text-decoration: none;
+    padding: 12px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .plan-cta:active { transform: scale(0.97); }
+
+  .features-section {
+    background: #1e293b;
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .features-section h3 {
+    font-size: 18px;
+    margin-bottom: 16px;
+    color: #f1f5f9;
+  }
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+  }
+  .feature {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .feature .icon { font-size: 22px; flex-shrink: 0; }
+  .feature h4 { font-size: 14px; margin-bottom: 4px; }
+  .feature p { font-size: 12px; color: #94a3b8; line-height: 1.4; }
+
+  .faq {
+    background: #1e293b;
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .faq h3 { font-size: 18px; margin-bottom: 16px; }
+  .faq details { margin-bottom: 8px; border-bottom: 1px solid #334155; padding-bottom: 8px; }
+  .faq details:last-child { border-bottom: none; }
+  .faq summary {
+    cursor: pointer;
+    font-weight: 600;
+    padding: 8px 0;
+    font-size: 14px;
+  }
+  .faq summary:hover { color: #ec4899; }
+  .faq details p {
+    font-size: 13px;
+    color: #94a3b8;
+    line-height: 1.5;
+    padding: 8px 0;
+  }
+
+  .contact {
+    text-align: center;
+    padding: 20px;
+    background: #1e293b;
+    border-radius: 14px;
+    margin-bottom: 24px;
+  }
+  .contact h3 { font-size: 16px; margin-bottom: 8px; }
+  .contact p { color: #94a3b8; font-size: 14px; margin-bottom: 12px; }
+  .contact a {
+    display: inline-block;
+    background: #334155;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  footer {
+    text-align: center;
+    color: #64748b;
+    font-size: 12px;
+    padding: 20px 0;
+  }
+  footer a { color: #94a3b8; text-decoration: none; margin: 0 6px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>🍸 BarTapp</h1>
+    <p>Drink ticket digitali per il tuo locale</p>
+  </header>
+
+  <div class="free-tier">
+    <h2>🎁 Prova gratis</h2>
+    <p>I primi 30 ticket sono in regalo. Nessuna carta richiesta.</p>
+  </div>
+
+  <div class="plans">
+    <div class="plan">
+      <div class="plan-name">Small</div>
+      <div class="plan-price"><span class="currency">€</span>5</div>
+      <div class="plan-period">per evento</div>
+      <ul class="plan-features">
+        <li>Fino a 100 ticket</li>
+        <li>QR code univoci</li>
+        <li>Scanner illimitato</li>
+        <li>Sincronizzazione cloud</li>
+      </ul>
+      <a class="plan-cta" href="#" onclick="alert('Contattaci per il link di pagamento'); return false;">Acquista</a>
+    </div>
+
+    <div class="plan featured">
+      <div class="plan-name">Medium</div>
+      <div class="plan-price"><span class="currency">€</span>12</div>
+      <div class="plan-period">per evento</div>
+      <ul class="plan-features">
+        <li>Fino a 300 ticket</li>
+        <li>QR code univoci</li>
+        <li>Scanner illimitato</li>
+        <li>Sincronizzazione cloud</li>
+        <li>Import lista Excel</li>
+      </ul>
+      <a class="plan-cta" href="#" onclick="alert('Contattaci per il link di pagamento'); return false;">Acquista</a>
+    </div>
+
+    <div class="plan">
+      <div class="plan-name">Large</div>
+      <div class="plan-price"><span class="currency">€</span>25</div>
+      <div class="plan-period">per evento</div>
+      <ul class="plan-features">
+        <li>Ticket illimitati</li>
+        <li>QR code univoci</li>
+        <li>Scanner illimitato</li>
+        <li>Sincronizzazione cloud</li>
+        <li>Import lista Excel</li>
+        <li>PDF stampabile</li>
+      </ul>
+      <a class="plan-cta" href="#" onclick="alert('Contattaci per il link di pagamento'); return false;">Acquista</a>
+    </div>
+  </div>
+
+  <div class="features-section">
+    <h3>Cosa include ogni evento</h3>
+    <div class="features-grid">
+      <div class="feature">
+        <span class="icon">⚡</span>
+        <div>
+          <h4>Setup in 5 minuti</h4>
+          <p>Funziona su iPhone, Android e PC. Niente da installare.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <span class="icon">🔒</span>
+        <div>
+          <h4>Niente duplicati</h4>
+          <p>Ogni ticket si brucia una volta sola. Validazione atomica anti-frode.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <span class="icon">👥</span>
+        <div>
+          <h4>Multi-staff</h4>
+          <p>Cassa e bar lavorano in parallelo, sincronizzati in tempo reale.</p>
+        </div>
+      </div>
+      <div class="feature">
+        <span class="icon">📊</span>
+        <div>
+          <h4>Report</h4>
+          <p>Esporta CSV con tutti i dati a fine evento.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="faq">
+    <h3>Domande frequenti</h3>
+
+    <details>
+      <summary>Cosa si intende per "1 evento"?</summary>
+      <p>Un periodo di 48 ore consecutive in cui puoi generare e bruciare ticket. Inizia dal momento del pagamento.</p>
+    </details>
+
+    <details>
+      <summary>Cosa succede se supero il limite di ticket?</summary>
+      <p>L'app ti avvisa quando ti avvicini al limite. Puoi acquistare un upgrade durante l'evento se necessario.</p>
+    </details>
+
+    <details>
+      <summary>I miei clienti devono installare un'app?</summary>
+      <p>No, ricevono solo un'immagine con il QR code via WhatsApp/email. Non serve nulla di più.</p>
+    </details>
+
+    <details>
+      <summary>Posso usarlo da iPhone?</summary>
+      <p>Sì, perfettamente. Consigliamo di aggiungere il sito alla schermata Home: si comporta come un'app nativa.</p>
+    </details>
+
+    <details>
+      <summary>I pagamenti dei drink passano da voi?</summary>
+      <p>No. BarTapp è solo software per gestire i ticket. I pagamenti dei drink restano sul tuo conto come fai già adesso (PayPal, contanti, POS).</p>
+    </details>
+
+    <details>
+      <summary>Posso avere un rimborso?</summary>
+      <p>Rimborso al 100% se l'app non funziona per un nostro problema tecnico. Niente rimborso dopo che l'evento è iniziato.</p>
+    </details>
+  </div>
+
+  <div class="contact">
+    <h3>📩 Vuoi provarlo per il tuo locale?</h3>
+    <p>Contattaci su WhatsApp o email per attivare il primo evento.</p>
+    <a href="mailto:ddinoto@me.com">Scrivici</a>
+  </div>
+
+  <footer>
+    <a href="../">Home</a> •
+    <a href="../generator/">Generator</a> •
+    <a href="../burner/">Burner</a>
+  </footer>
+</div>
+
+</body>
+</html>

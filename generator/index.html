@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>🎟️ Drink Ticket — Generatore</title>
+<title>🍸 BarTapp — Generatore</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -358,7 +358,7 @@ margin-top: 8px;
 </div>
 
 <header>
-  <h1>🎟️ Generatore Ticket</h1>
+  <h1>🍸 BarTapp — Generatore</h1>
   <div class="subtitle">
     <span class="sync-indicator" id="sync-dot"></span>
     <span id="sync-status">Connessione...</span>
@@ -737,7 +737,7 @@ function composeOrderImage(order) {
     ctx.fillStyle = '#1e293b';
     ctx.font = 'bold 30px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('🎟️ DRINK TICKET', x + ticketW/2, y + 60);
+    ctx.fillText('🍸 BARTAPP', x + ticketW/2, y + 60);
     ctx.font = 'bold 18px sans-serif';
     ctx.fillStyle = '#ec4899';
     ctx.fillText(`${idx + 1} di ${qty}`, x + ticketW/2, y + 90);
@@ -792,7 +792,7 @@ async function shareOrderImage() {
       try {
         await navigator.share({
           files: [file],
-          title: 'I tuoi drink ticket',
+          title: 'I tuoi drink ticket — BarTapp',
           text: `${STATE.currentOrder.qty} drink ticket per ${STATE.currentOrder.name}`
         });
       } catch(e) { if (e.name !== 'AbortError') toast('Condivisione annullata'); }
